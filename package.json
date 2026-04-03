@@ -7,7 +7,6 @@
         "dev": "concurrently \"npm run dev:frontend\" \"npm run dev:backend\"",
         "dev:frontend": "vite",
         "dev:backend": "convex dev",
-        "prepare": "husky install",
         "compile:runtime": "tsc -p tsconfig.runtime.json",
         "validate:runtime": "npm run compile:runtime && node dist/runtimeValidation/runner.js"
     },
