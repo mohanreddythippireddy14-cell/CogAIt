@@ -1,0 +1,20 @@
+{
+  "name": "cogait-agentic",
+  "version": "1.0.0",
+  "description": "CogAIt Agentic Layer utilizing Google Cloud Native services",
+  "type": "module",
+  "scripts": {
+    "build": "tsc"
+  },
+  "dependencies": {
+    "@google/genai": "^1.49.0",
+    "@hono/node-server": "^1.11.1",
+    "convex": "^1.10.0",
+    "groq-sdk": "^1.1.2",
+    "hono": "^4.2.7"
+  },
+  "devDependencies": {
+    "@types/node": "^20.12.7",
+    "typescript": "^5.4.5"
+  }
+}

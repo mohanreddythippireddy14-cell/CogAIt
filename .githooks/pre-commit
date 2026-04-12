@@ -1,0 +1,8 @@
+#!/usr/bin/env sh
+
+if ! command -v gitleaks >/dev/null 2>&1; then
+  echo "gitleaks is not installed. Install gitleaks to enable secret scanning."
+  exit 1
+fi
+
+gitleaks protect --staged

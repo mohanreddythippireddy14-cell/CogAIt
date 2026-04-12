@@ -1,0 +1,20 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "strict": true,
+    "skipLibCheck": true,
+    "esModuleInterop": true,
+    "isolatedModules": false,
+    "declaration": false,
+    "sourceMap": false,
+    "rootDir": ".",
+    "outDir": "dist"
+  },
+  "include": [
+    "runtimeValidation/**/*.ts",
+    "convex/infrastructure/featureFlags.ts",
+    "convex/infrastructure/logger.ts"
+  ]
+}
