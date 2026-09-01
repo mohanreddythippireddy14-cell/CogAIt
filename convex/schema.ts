@@ -1,7 +1,7 @@
 import { defineSchema, defineTable } from "convex/server";
 import { v } from "convex/values";
 import { authTables } from "@convex-dev/auth/server";
-import { contentBlockValidator } from "./domain/contentBlocks";
+import { contentBlockValidator } from "./domain/contentBlocks.js";
 
 const applicationTables = {
   organizations: defineTable({

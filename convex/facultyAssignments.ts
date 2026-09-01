@@ -19,9 +19,6 @@ import {
   validateContentBlocks,
 } from "./domain/contentBlocks";
 
-if (!process.env.GOOGLE_API_KEY) {
-  throw new Error("Missing GOOGLE_API_KEY environment variable");
-}
 
 const subjectValidator = v.union(v.literal("Physics"), v.literal("Chemistry"), v.literal("Math"));
 const difficultyValidator = v.union(v.literal("easy"), v.literal("medium"), v.literal("hard"));

@@ -22,9 +22,6 @@ import {
   toAiStructuredLines,
 } from "./domain/contentBlocks";
 
-if (!process.env.GOOGLE_API_KEY) {
-  throw new Error("Missing GOOGLE_API_KEY environment variable");
-}
 
 const aiInteractionValidator = v.object({
   _id: v.id("aiInteractions"),
