@@ -22,16 +22,20 @@ export function computeFinalIndependenceScore(params: {
   }>;
   expectedMsPerQuestion: number;
 }) {
-  const gradedAttempts = params.attempts.filter(
-    (attempt) => attempt.submittedAt !== undefined && (attempt.studentAnswer ?? "").trim().length > 0,
-  );
+  const gradedAttempts = params.attempts.filter((attempt) => attempt.submittedAt !== undefined);
   if (gradedAttempts.length === 0) {
     return { finalScore: 0, gradedCount: 0 };
   }
 
   const scores = gradedAttempts.map((attempt) => {
-    const correctnessScore =
-      attempt.isCorrect === true ? 100 : attempt.isCorrect === false ? 25 : 50;
+    const hasAnswer = (attempt.studentAnswer ?? "").trim().length > 0;
+    const correctnessScore = !hasAnswer
+      ? 0
+      : attempt.isCorrect === true
+        ? 100
+        : attempt.isCorrect === false
+          ? 25
+          : 50;
     const helpPenalty = Math.min(attempt.totalHelpRequests * 12, 60);
     const helpScore = Math.max(0, 100 - helpPenalty);
     const elapsedMs = (attempt.submittedAt ?? attempt.startedAt) - attempt.startedAt;
@@ -113,22 +117,23 @@ export function computeOverallCis(
     studentReasoning?: string;
   }>,
 ): number {
-  const graded = attempts.filter(
-    (attempt) => attempt.submittedAt !== undefined && (attempt.studentAnswer ?? "").trim().length > 0,
-  );
+  const graded = attempts.filter((attempt) => attempt.submittedAt !== undefined);
   if (graded.length === 0) {
     return 0;
   }
   const total = graded.reduce(
     (sum, attempt) =>
       sum +
-      computeCisPerQuestion({
-        totalHelpRequests: attempt.totalHelpRequests,
-        helpLevelsUsed: attempt.helpLevelsUsed,
-        reasoningCharCountBeforeFirstHelp: attempt.reasoningCharCountBeforeFirstHelp,
-        fallbackReasoningLength: attempt.studentReasoning?.length ?? 0,
-      }),
+      ((attempt.studentAnswer ?? "").trim().length > 0
+        ? computeCisPerQuestion({
+            totalHelpRequests: attempt.totalHelpRequests,
+            helpLevelsUsed: attempt.helpLevelsUsed,
+            reasoningCharCountBeforeFirstHelp: attempt.reasoningCharCountBeforeFirstHelp,
+            fallbackReasoningLength: attempt.studentReasoning?.length ?? 0,
+          })
+        : 0),
     0,
   );
   return Math.round(total / graded.length);
 }
+    

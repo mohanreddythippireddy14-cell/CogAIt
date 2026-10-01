@@ -73,6 +73,7 @@ export interface AssignmentAnalystOutput {
 // ==========================================
 export interface ContentAgentInput {
   student_id: string;
+  conversation_id?: string;
   weak_topics: string[];
   remediation_preference: RemediationPreference;
   time_available_minutes: number;

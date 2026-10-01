@@ -1,4 +1,4 @@
-﻿import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import { useNavigate, useParams } from "react-router-dom";
@@ -24,8 +24,7 @@ export function EditAssignment() {
         dueDate?: number;
         instructions?: string;
         timeLimitMinutes: number;
-        minReasoningChars: number;
-        allowedLevels: number[];
+        allowedLevels?: number[];
         isActive: boolean;
         questionCount: number;
       }
@@ -68,8 +67,6 @@ export function EditAssignment() {
     dueDate: "",
     instructions: "",
     timeLimitMinutes: "90",
-    minReasoningChars: "30",
-    allowedLevels: [1, 2, 3, 4] as number[],
   });
 
   const initialized = useMemo(() => form.title.length > 0, [form.title.length]);
@@ -84,8 +81,6 @@ export function EditAssignment() {
         dueDate: assignment.dueDate ? new Date(assignment.dueDate).toISOString().slice(0, 10) : "",
         instructions: assignment.instructions ?? "",
         timeLimitMinutes: String(assignment.timeLimitMinutes),
-        minReasoningChars: String(assignment.minReasoningChars ?? 30),
-        allowedLevels: assignment.allowedLevels,
       });
     }
   }, [initialized, assignment]);
@@ -150,7 +145,6 @@ export function EditAssignment() {
       return;
     }
     const parsedTime = Number(form.timeLimitMinutes);
-    const parsedMinReasoning = Number(form.minReasoningChars);
     if (!Number.isFinite(parsedTime)) {
       toast.error("Time limit must be a number");
       return;
@@ -163,15 +157,6 @@ export function EditAssignment() {
       toast.error("Time limit must be at most 180 minutes");
       return;
     }
-    if (!Number.isFinite(parsedMinReasoning) || parsedMinReasoning < 0) {
-      toast.error("Minimum reasoning chars must be 0 or greater");
-      return;
-    }
-    if (form.allowedLevels.length === 0) {
-      toast.error("Select at least one help level");
-      return;
-    }
-
     setSaving(true);
     try {
       await updateAssignmentBasics({
@@ -184,8 +169,6 @@ export function EditAssignment() {
         dueDate: form.dueDate ? new Date(form.dueDate).getTime() : undefined,
         instructions: form.instructions.trim() || undefined,
         timeLimitMinutes: parsedTime,
-        minReasoningChars: Math.floor(parsedMinReasoning),
-        allowedLevels: form.allowedLevels,
       });
       toast.success("Assignment updated");
       navigate("/lecturer/dashboard");
@@ -283,9 +266,9 @@ export function EditAssignment() {
         </button>
       </div>
 
-      <div className="bg-white border rounded-lg p-6 space-y-4">
+      <div className="spatial-widget p-6 space-y-4">
         <div>
-          <p className="text-sm text-gray-500">Questions</p>
+          <p className="text-sm text-white/50">Questions</p>
           <p className="font-medium">{assignment.questionCount}</p>
         </div>
         <div>
@@ -375,92 +358,25 @@ export function EditAssignment() {
             className="auth-input-field"
           />
         </div>
-        <div>
-          <label className="block text-sm font-medium mb-2">Minimum Reasoning Characters</label>
-          <input
-            type="number"
-            min={0}
-            max={300}
-            value={form.minReasoningChars}
-            onChange={(e) =>
-              setForm((prev) => ({
-                ...prev,
-                minReasoningChars: e.target.value,
-              }))
-            }
-            className="auth-input-field"
-          />
-        </div>
-        <div>
-          <p className="text-sm font-medium mb-2">Allowed Help Levels</p>
-          <div className="flex flex-wrap gap-2">
-            {[1, 2, 3, 4].map((level) => (
-              <label key={level} className="inline-flex items-center gap-2 px-3 py-2 border rounded-lg">
-                <input
-                  type="checkbox"
-                  checked={form.allowedLevels.includes(level)}
-                  onChange={(e) => {
-                    if (e.target.checked) {
-                      setForm((prev) => ({
-                        ...prev,
-                        allowedLevels: [...prev.allowedLevels, level].sort(),
-                      }));
-                    } else {
-                      setForm((prev) => ({
-                        ...prev,
-                        allowedLevels: prev.allowedLevels.filter((x) => x !== level),
-                      }));
-                    }
-                  }}
-                />
-                Level {level}
-              </label>
-            ))}
-          </div>
-          <div className="mt-3 flex flex-wrap gap-2">
-            <button
-              type="button"
-              onClick={() => setForm((prev) => ({ ...prev, allowedLevels: [1, 2] }))}
-              className="px-3 py-1 rounded bg-red-100 text-red-700 text-xs"
-            >
-              Strict (1-2)
-            </button>
-            <button
-              type="button"
-              onClick={() => setForm((prev) => ({ ...prev, allowedLevels: [1, 2, 3] }))}
-              className="px-3 py-1 rounded bg-amber-100 text-amber-700 text-xs"
-            >
-              Balanced (1-3)
-            </button>
-            <button
-              type="button"
-              onClick={() => setForm((prev) => ({ ...prev, allowedLevels: [1, 2, 3, 4] }))}
-              className="px-3 py-1 rounded bg-green-100 text-green-700 text-xs"
-            >
-              All Levels
-            </button>
-          </div>
-        </div>
-
         <div className="flex items-center justify-between pt-2">
           <button
             onClick={() => void onToggle()}
             disabled={toggling}
-            className="px-4 py-2 bg-gray-100 rounded-lg hover:bg-gray-200 disabled:opacity-50"
+            className="px-4 py-2 ui-button ui-button-secondary rounded-lg hover:bg-gray-200 disabled:opacity-50"
           >
             {toggling ? "Updating..." : assignment.isActive ? "Deactivate" : "Activate"}
           </button>
           <button
             onClick={() => void onSave()}
             disabled={saving}
-            className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 disabled:opacity-50"
+            className="px-4 py-2 ui-button ui-button-primary rounded-lg hover:bg-blue-600 disabled:opacity-50"
           >
             {saving ? "Saving..." : "Save Changes"}
           </button>
         </div>
       </div>
 
-      <div className="bg-white border rounded-lg p-6 space-y-4">
+      <div className="spatial-widget p-6 space-y-4">
         <div className="flex items-center justify-between">
           <h2 className="text-lg font-semibold">Assignment Questions</h2>
           <div className="flex gap-2">
@@ -473,7 +389,7 @@ export function EditAssignment() {
             <button
               onClick={() => void onAddQuestion()}
               disabled={addingQuestion}
-              className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 disabled:opacity-50"
+              className="px-4 py-2 ui-button ui-button-primary rounded-lg hover:bg-blue-600 disabled:opacity-50"
             >
               {addingQuestion ? "Adding..." : "Add Question"}
             </button>
@@ -483,7 +399,7 @@ export function EditAssignment() {
         {showQuestions && (
           <div className="space-y-4">
             {!questions || questions.length === 0 ? (
-              <p className="text-sm text-gray-600">No questions in this assignment.</p>
+              <p className="text-sm text-white/60">No questions in this assignment.</p>
             ) : (
               questions.map((q) => {
                 const draft = questionDrafts[q._id];
@@ -495,7 +411,7 @@ export function EditAssignment() {
                       <button
                         onClick={() => void onDeleteQuestion(q._id)}
                         disabled={deletingQuestionId === q._id}
-                        className="text-sm text-red-600 hover:text-red-700 disabled:opacity-50"
+                        className="text-sm text-[var(--color-danger)] hover:text-red-400 disabled:opacity-50"
                       >
                         {deletingQuestionId === q._id ? "Deleting..." : "Delete"}
                       </button>
@@ -587,7 +503,7 @@ export function EditAssignment() {
                       <button
                         onClick={() => void onSaveQuestion(q._id)}
                         disabled={savingQuestionId === q._id}
-                        className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 disabled:opacity-50"
+                        className="px-4 py-2 ui-button ui-button-primary rounded-lg hover:bg-blue-600 disabled:opacity-50"
                       >
                         {savingQuestionId === q._id ? "Saving..." : "Save Question"}
                       </button>

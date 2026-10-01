@@ -1,0 +1,12 @@
+{
+  "event_name": "remediation_declined",
+  "version": "1.0.0",
+  "timestamp": "ISO-8601",
+  "payload": {
+    "student_id": "string",
+    "assignment_id": "string",
+    "weak_topics": ["string"],
+    "pending_remediation_id": "string",
+    "reason": "student_declined|expired"
+  }
+}

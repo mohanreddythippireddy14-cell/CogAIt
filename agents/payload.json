@@ -1,0 +1,13 @@
+{
+  "lecturer_id": "lecturer-123",
+  "report_date": "2026-10-01T00:00:00.000Z",
+  "cohort_intelligence": {
+    "batch_id": "batch-1",
+    "report_date": "2026-10-01T00:00:00.000Z",
+    "failing_topics": [{"topic":"Arrays", "failure_rate_pct":60, "avg_scaffold_depth":2}],
+    "at_risk_students": [{"student_id":"s1", "reason":"Low score"}],
+    "ai_dependency_students": ["s2"],
+    "cohort_cis_avg": 0.5,
+    "cohort_cis_trend": "declining"
+  }
+}

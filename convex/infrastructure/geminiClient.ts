@@ -11,6 +11,7 @@ export type GeminiTextRequest = {
   maxOutputTokens: number;
   timeoutMs?: number;
   retryQuotaOnce?: boolean;
+  useWebSearch?: boolean;
   onUsage?: (usage: { model: string; totalTokenCount: number }) => void;
 };
 
@@ -79,13 +80,19 @@ export async function generateTextWithFallback(req: GeminiTextRequest): Promise<
   for (const modelName of req.candidateModels) {
     const attempt = async () => {
       const model = genAI.getGenerativeModel({ model: modelName });
-      const result = await model.generateContent({
+      const generationParams: any = {
         contents: [{ role: "user", parts: [{ text: req.prompt }] }],
         generationConfig: {
           temperature: req.temperature,
           maxOutputTokens: req.maxOutputTokens,
         },
-      } as any);
+      };
+
+      if (req.useWebSearch) {
+        generationParams.tools = [{ googleSearch: {} }];
+      }
+
+      const result = await model.generateContent(generationParams);
       const response = await result.response;
       const text = response.text();
       if (!text) {

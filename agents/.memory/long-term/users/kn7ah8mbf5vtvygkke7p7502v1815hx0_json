@@ -1,0 +1,34 @@
+{
+  "userId": "kn7ah8mbf5vtvygkke7p7502v1815hx0",
+  "studyPreferences": {
+    "preferredStudyWindowStart": "17:00",
+    "preferredStudyWindowEnd": "22:00"
+  },
+  "sessionHistory": [
+    {
+      "assignmentId": "j97e4fjzghz71zah4gag4vckwn84qpjk",
+      "recordedAt": "2026-09-30T18:42:54.848Z",
+      "payload": {
+        "student_id": "kn7ah8mbf5vtvygkke7p7502v1815hx0",
+        "assignment_id": "j97e4fjzghz71zah4gag4vckwn84qpjk",
+        "topic_performance": [
+          {
+            "topic_name": "Angular Displacement",
+            "max_scaffold_depth": 1,
+            "classification": "weak"
+          }
+        ],
+        "weak_topics": [
+          "Angular Displacement"
+        ],
+        "strong_topics": [],
+        "remediation_recommended": true,
+        "session_integrity_score": 0.9,
+        "time_available_for_remediation": true
+      }
+    }
+  ],
+  "cisHistory": [],
+  "vectorPatterns": [],
+  "lastUpdatedAt": "2026-09-30T18:42:54.849Z"
+}

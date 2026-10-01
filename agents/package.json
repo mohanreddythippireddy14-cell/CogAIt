@@ -4,14 +4,25 @@
   "description": "CogAIt Agentic Layer utilizing Google Cloud Native services",
   "type": "module",
   "scripts": {
-    "build": "tsc"
+    "build": "tsc",
+    "test:negotiation": "tsx src/scripts/test_negotiation_flow.ts",
+    "dev:agent1": "node --env-file=.env dist/agent1_socratic/index.js",
+    "dev:agent2": "node --env-file=.env dist/agent2_analyst/index.js",
+    "dev:agent3": "node --env-file=.env dist/agent3_content/index.js",
+    "dev:agent4": "node --env-file=.env dist/agent4_longterm/index.js",
+    "dev:agent5": "node --env-file=.env dist/agent5_ingestion/index.js",
+    "dev:agent6": "node --env-file=.env dist/agent6_cohort/index.js",
+    "dev:agent7": "node --env-file=.env dist/agent7_recommendation/index.js",
+    "dev:agent-negotiation": "node --env-file=.env dist/middleware/negotiation_node.js",
+    "dev:agent8": "node --env-file=.env dist/agent8_judge/index.js"
   },
   "dependencies": {
     "@google/genai": "^1.49.0",
     "@hono/node-server": "^1.11.1",
     "convex": "^1.10.0",
     "groq-sdk": "^1.1.2",
-    "hono": "^4.2.7"
+    "hono": "^4.2.7",
+    "undici": "^8.11.2"
   },
   "devDependencies": {
     "@types/node": "^20.12.7",

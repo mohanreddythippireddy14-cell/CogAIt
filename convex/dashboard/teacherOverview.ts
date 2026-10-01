@@ -2,7 +2,7 @@ import { action, mutation, query } from "../_generated/server";
 import { v } from "convex/values";
 import { internal } from "../_generated/api";
 import type { Id } from "../_generated/dataModel.js";
-import { requireAuthWithProfile } from "../lib/authGuards";
+import { requireAuthWithProfile, requireAuthFromAction } from "../lib/authGuards";
 import { isFeatureEnabled } from "../infrastructure/featureFlags";
 import { METRIC_CONTRACTS } from "../constants";
 
@@ -55,7 +55,7 @@ export const getTeacherOverview = action({
     metricVersion: v.string(),
   }),
   handler: async (ctx): Promise<TeacherOverviewResult> => {
-    const { userId, profile } = await requireAuthWithProfile(ctx);
+    const { userId, profile } = await requireAuthFromAction(ctx);
     assertFaculty(profile.role);
     if (!isFeatureEnabled("teacherDashboardApi", profile.organizationId)) {
       throw new Error("Teacher dashboard API feature is disabled.");

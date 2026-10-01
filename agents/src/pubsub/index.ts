@@ -1,7 +1,9 @@
 const TOPIC_PORT_MAPPING: Record<string, number> = {
   'session_ended': 8082,          // Agent 2 (Analyst)
   'weak_topics_identified': 8089, // Negotiation Node
+  'remediation_offer_ready': 8089, // Negotiation Node/Web UI signal bridge
   'remediation_requested': 8083,  // Agent 3 (Content)
+  'remediation_declined': 8089,   // Negotiation Node/audit
   'session_record_written': 8084, // Agent 4 (Long-Term Analyst)
   'student_report_ready': 8086,   // Agent 6 (Cohort Analyst)
   'cohort_intelligence_ready': 8087,// Agent 7 (Recommendation)
@@ -12,7 +14,9 @@ const TOPIC_PORT_MAPPING: Record<string, number> = {
 const ENDPOINT_MAP: Record<string, string> = {
   'session_ended': '/webhook/session_ended',
   'weak_topics_identified': '/webhook/weak_topics_identified', // routed to negotiation node
+  'remediation_offer_ready': '/webhook/remediation_offer_ready',
   'remediation_requested': '/webhook/remediation_requested', // routed to agent 3
+  'remediation_declined': '/webhook/remediation_declined',
   'session_record_written': '/task/longterm_analysis',
   'student_report_ready': '/workflow/cohort_analysis',
   'cohort_intelligence_ready': '/workflow/recommendation_generation',

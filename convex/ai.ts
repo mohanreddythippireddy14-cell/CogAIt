@@ -278,13 +278,14 @@ export const sendChatMessage = action({
       intermediateCalculationsUsed,
       conversationTurnCount,
     })}\n\nQuestion Context:\n${questionContext.structured}\n`;
-    conversationText += `\nStudent reasoning: ${args.studentInput}\n`;
 
     // Add conversation history
     for (const interaction of history) {
       conversationText += `\nStudent: ${interaction.studentInput}\n`;
       conversationText += `Assistant: ${interaction.aiResponse}\n`;
     }
+
+    conversationText += `\nStudent reasoning: ${args.studentInput}\n`;
 
     const startTime = Date.now();
     const reasoningText = (attempt.studentReasoning ?? "").trim();
@@ -303,7 +304,7 @@ export const sendChatMessage = action({
         : "legacy";
       let { text: aiResponse, totalTokenCount: tokensUsed } = await generateTextWithFallback({
         prompt: conversationText,
-        candidateModels: ["gemini-2.5-flash", "gemini-flash-latest", "gemini-2.0-flash"],
+        candidateModels: [(process.env.GEMINI_MODEL || "gemini-3.5-flash")],
         temperature: activeHelpLevel <= 2 ? 0.7 : 0.8,
         maxOutputTokens: getMaxTokens(activeHelpLevel),
         retryQuotaOnce: true,
@@ -342,7 +343,7 @@ export const sendChatMessage = action({
         );
         const regenerated = await generateTextWithFallback({
           prompt: retryPrompt,
-          candidateModels: ["gemini-2.5-flash", "gemini-flash-latest", "gemini-2.0-flash"],
+          candidateModels: [(process.env.GEMINI_MODEL || "gemini-3.5-flash")],
           temperature: 0.5,
           maxOutputTokens: getMaxTokens(activeHelpLevel),
           retryQuotaOnce: true,
@@ -518,7 +519,7 @@ export const sendImageFeedback = action({
               `mode=${args.mode}; help_level=${activeHelpLevel}; system_prompt_version=${args.system_prompt_version}`,
           },
         ],
-        candidateModels: ["gemini-2.5-flash", "gemini-2.5-pro", "gemini-2.0-flash"],
+        candidateModels: [(process.env.GEMINI_MODEL || "gemini-3.5-flash")],
         temperature: activeHelpLevel <= 2 ? 0.7 : 0.8,
         maxOutputTokens: getMaxTokens(activeHelpLevel),
         retryQuotaOnce: true,

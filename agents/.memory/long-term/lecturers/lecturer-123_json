@@ -1,0 +1,73 @@
+{
+  "lecturerId": "lecturer-123",
+  "briefings": [
+    {
+      "recordedAt": "2026-10-01T05:03:23.567Z",
+      "payload": {
+        "lecturer_id": "lecturer-123",
+        "report_date": "2026-10-01",
+        "briefing_markdown": "# Lecturer Briefing\n\nThis is a fallback briefing generated without LLM output due to upstream timeouts.\n\n## Priority Topics\n- Arrays (60%)\n\n## At-Risk Students\n- s1: Low score\n",
+        "priority_topics": [
+          {
+            "topic": "Arrays",
+            "failure_rate_pct": 60,
+            "recommended_action": "Run a targeted revision session and assign practice on this topic."
+          }
+        ],
+        "at_risk_students": [
+          {
+            "student_id": "s1",
+            "reason": "Low score"
+          }
+        ],
+        "critical_alerts": [
+          {
+            "alert_text": "Student s1 requires immediate check-in (Low score).",
+            "severity": "high"
+          }
+        ],
+        "recommended_interventions": [
+          {
+            "target": "Arrays",
+            "action": "Assign a remediation worksheet and monitor next attempt."
+          }
+        ]
+      }
+    },
+    {
+      "recordedAt": "2026-10-01T05:17:21.431Z",
+      "payload": {
+        "lecturer_id": "lecturer-123",
+        "report_date": "2026-10-01",
+        "briefing_markdown": "# Lecturer Briefing\n\nThis is a fallback briefing generated without LLM output due to upstream timeouts.\n\n## Priority Topics\n- Arrays (60%)\n\n## At-Risk Students\n- s1: Low score\n",
+        "priority_topics": [
+          {
+            "topic": "Arrays",
+            "failure_rate_pct": 60,
+            "recommended_action": "Run a targeted revision session and assign practice on this topic."
+          }
+        ],
+        "at_risk_students": [
+          {
+            "student_id": "s1",
+            "reason": "Low score"
+          }
+        ],
+        "critical_alerts": [
+          {
+            "alert_text": "Student s1 requires immediate check-in (Low score).",
+            "severity": "high"
+          }
+        ],
+        "recommended_interventions": [
+          {
+            "target": "Arrays",
+            "action": "Assign a remediation worksheet and monitor next attempt."
+          }
+        ]
+      }
+    }
+  ],
+  "cohortSummaries": [],
+  "lastUpdatedAt": "2026-10-01T05:17:21.431Z"
+}

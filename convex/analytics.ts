@@ -48,7 +48,7 @@ const assignmentValidator = v.object({
   description: v.optional(v.string()),
   timeLimitMinutes: v.number(),
   totalQuestions: v.number(),
-  allowedLevels: v.array(v.number()),
+  allowedLevels: v.optional(v.array(v.number())),
   isActive: v.boolean(),
   publishedAt: v.optional(v.number()),
   aiProcessingStatus: v.optional(
@@ -62,6 +62,16 @@ const assignmentValidator = v.object({
   ),
   aiProcessingError: v.optional(v.string()),
   aiJobId: v.optional(v.id("facultyAssignmentJobs")),
+  classroomId: v.optional(v.id("classrooms")),
+  subject: v.optional(v.union(v.literal("Physics"), v.literal("Chemistry"), v.literal("Math"))),
+  chapter: v.optional(v.string()),
+  difficulty: v.optional(v.union(v.literal("easy"), v.literal("medium"), v.literal("hard"), v.literal("mixed"))),
+  dueDate: v.optional(v.number()),
+  instructions: v.optional(v.string()),
+  minReasoningChars: v.optional(v.number()),
+  targetStudentId: v.optional(v.id("users")),
+  isDeepDive: v.optional(v.boolean()),
+  sourceAssignmentId: v.optional(v.id("assignments")),
 });
 
 export const getAssignmentAnalytics = query({

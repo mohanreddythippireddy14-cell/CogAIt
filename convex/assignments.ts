@@ -43,7 +43,7 @@ export const createAssignment = mutation({
     instructions: v.optional(v.string()),
     timeLimitMinutes: v.number(),
     minReasoningChars: v.optional(v.number()),
-    allowedLevels: v.array(v.number()),
+    allowedLevels: v.optional(v.array(v.number())),
     classroomId: v.id("classrooms"),
   },
   returns: v.id("assignments"),
@@ -249,7 +249,7 @@ export const getLecturerAssignmentForEdit = query({
       instructions: v.optional(v.string()),
       timeLimitMinutes: v.number(),
       minReasoningChars: v.number(),
-      allowedLevels: v.array(v.number()),
+      allowedLevels: v.optional(v.array(v.number())),
       isActive: v.boolean(),
       totalQuestions: v.number(),
       questionCount: v.number(),
@@ -302,7 +302,7 @@ export const updateAssignmentBasics = mutation({
     instructions: v.optional(v.string()),
     timeLimitMinutes: v.number(),
     minReasoningChars: v.optional(v.number()),
-    allowedLevels: v.array(v.number()),
+    allowedLevels: v.optional(v.array(v.number())),
   },
   returns: v.null(),
   handler: async (ctx, args) => {
@@ -321,7 +321,7 @@ export const updateAssignmentBasics = mutation({
     if (/^[a-z0-9]{6,}$/i.test(title)) {
       throw new Error("Assignment title looks like an internal ID. Please use a descriptive title.");
     }
-    if (args.allowedLevels.length === 0) {
+    if (args.allowedLevels && args.allowedLevels.length === 0) {
       throw new Error("Select at least one allowed help level.");
     }
 
@@ -360,7 +360,7 @@ export const getLecturerAssignments = query({
       timeLimitMinutes: v.number(),
       minReasoningChars: v.optional(v.number()),
       totalQuestions: v.number(),
-      allowedLevels: v.array(v.number()),
+      allowedLevels: v.optional(v.array(v.number())),
       isActive: v.boolean(),
       publishedAt: v.optional(v.number()),
       aiProcessingStatus: v.optional(
@@ -374,6 +374,9 @@ export const getLecturerAssignments = query({
       ),
       aiProcessingError: v.optional(v.string()),
       aiJobId: v.optional(v.id("facultyAssignmentJobs")),
+      targetStudentId: v.optional(v.id("users")),
+      isDeepDive: v.optional(v.boolean()),
+      sourceAssignmentId: v.optional(v.id("assignments")),
       questionCount: v.number(),
       studentsAttempted: v.number(),
       studentsCompleted: v.number(),
@@ -442,7 +445,7 @@ export const getStudentAssignments = query({
       timeLimitMinutes: v.number(),
       minReasoningChars: v.optional(v.number()),
       totalQuestions: v.number(),
-      allowedLevels: v.array(v.number()),
+      allowedLevels: v.optional(v.array(v.number())),
       isActive: v.boolean(),
       publishedAt: v.optional(v.number()),
       aiProcessingStatus: v.optional(
@@ -456,6 +459,9 @@ export const getStudentAssignments = query({
       ),
       aiProcessingError: v.optional(v.string()),
       aiJobId: v.optional(v.id("facultyAssignmentJobs")),
+      targetStudentId: v.optional(v.id("users")),
+      isDeepDive: v.optional(v.boolean()),
+      sourceAssignmentId: v.optional(v.id("assignments")),
       status: v.union(v.literal("not_started"), v.literal("in_progress"), v.literal("completed")),
       progress: v.number(),
       avgScore: v.number(),
@@ -486,12 +492,15 @@ export const getStudentAssignments = query({
         timeLimitMinutes: number;
         minReasoningChars?: number;
         totalQuestions: number;
-        allowedLevels: number[];
+        allowedLevels: number[] | undefined;
         isActive: boolean;
         publishedAt?: number;
         aiProcessingStatus?: "processing" | "review_ready" | "completed" | "failed" | "failed_timeout";
         aiProcessingError?: string;
         aiJobId?: any;
+        targetStudentId?: any;
+        isDeepDive?: boolean;
+        sourceAssignmentId?: any;
         status: "not_started" | "in_progress" | "completed";
         progress: number;
         avgScore: number;
@@ -544,8 +553,14 @@ export const getStudentAssignments = query({
     }
 
     const visibleAssignments = assignments.filter(
-      (assignment) =>
-        assignment.classroomId && enrolledClassroomIds.has(assignment.classroomId.toString()),
+      (assignment) => {
+        // Deep-dive assignments are only visible to the targeted student
+        if (assignment.targetStudentId) {
+          return assignment.targetStudentId === userId;
+        }
+        // Regular assignments: must be in an enrolled classroom
+        return assignment.classroomId && enrolledClassroomIds.has(assignment.classroomId.toString());
+      },
     );
 
     // Build student assignment progress without per-assignment attempt queries

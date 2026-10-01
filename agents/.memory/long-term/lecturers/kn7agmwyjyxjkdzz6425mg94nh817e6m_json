@@ -1,0 +1,661 @@
+{
+  "lecturerId": "kn7agmwyjyxjkdzz6425mg94nh817e6m",
+  "briefings": [
+    {
+      "recordedAt": "2026-04-14T15:25:24.248Z",
+      "payload": {
+        "lecturer_id": "kn7agmwyjyxjkdzz6425mg94nh817e6m",
+        "report_date": "2026-04-14",
+        "briefing_markdown": "# Lecturer Briefing\n\n\n\n",
+        "priority_topics": [
+          {
+            "topic": "Linear Algebra",
+            "failure_rate_pct": 35,
+            "recommended_action": "Schedule a review session on linear algebra concepts and provide additional practice problems for students to work on outside of class."
+          },
+          {
+            "topic": "Calculus",
+            "failure_rate_pct": 42,
+            "recommended_action": "Develop a series of interactive visualizations to help students understand key calculus concepts and provide opportunities for students to apply these concepts to real-world problems."
+          },
+          {
+            "topic": "Data Structures",
+            "failure_rate_pct": 28,
+            "recommended_action": "Create a series of coding challenges that focus on data structures and provide individualized feedback to students on their code."
+          }
+        ],
+        "at_risk_students": [
+          {
+            "student_id": "s123456",
+            "reason": "High CIS drop due to AI scaffolding dependency"
+          },
+          {
+            "student_id": "s234567",
+            "reason": "Low CIS trend due to lack of engagement in class discussions"
+          }
+        ],
+        "critical_alerts": [
+          {
+            "alert_text": "Student s123456 is at risk of failing the course due to high dependence on AI scaffolding.",
+            "severity": "critical"
+          }
+        ],
+        "recommended_interventions": [
+          {
+            "target": "s123456",
+            "action": "Meet with student to discuss their reliance on AI scaffolding and develop a plan to improve their understanding of course material."
+          },
+          {
+            "target": "s234567",
+            "action": "Reach out to student to encourage them to participate more in class discussions and provide additional support as needed."
+          }
+        ]
+      }
+    },
+    {
+      "recordedAt": "2026-04-14T15:32:19.364Z",
+      "payload": {
+        "lecturer_id": "kn7agmwyjyxjkdzz6425mg94nh817e6m",
+        "report_date": "2026-04-14",
+        "briefing_markdown": "# Lecturer Briefing\n\n**Cohort Intelligence Report for Lecturer kn7agmwyjyxjkdzz6425mg94nh817e6m**\n\nCohort CIS average: 0.0%\nCohort CIS trend: Stable\n\n\n\n",
+        "priority_topics": [
+          {
+            "topic": "Mathematics",
+            "failure_rate_pct": 45,
+            "recommended_action": "Schedule a review session for the entire cohort on the topic of calculus, focusing on problem-solving strategies and providing additional practice exercises."
+          },
+          {
+            "topic": "Programming",
+            "failure_rate_pct": 38,
+            "recommended_action": "Offer one-on-one coding sessions for students struggling with object-oriented programming concepts, providing personalized feedback and guidance."
+          },
+          {
+            "topic": "Data Analysis",
+            "failure_rate_pct": 42,
+            "recommended_action": "Develop a series of interactive data visualization exercises to help students better understand data interpretation and presentation techniques."
+          }
+        ],
+        "at_risk_students": [
+          {
+            "student_id": "s123456",
+            "reason": "High reliance on AI scaffolding for assignments and quizzes, indicating potential lack of understanding of course material."
+          },
+          {
+            "student_id": "s234567",
+            "reason": "Consistently submitting low-quality work, suggesting possible dependency on AI-generated content."
+          }
+        ],
+        "critical_alerts": [
+          {
+            "alert_text": "Student s123456 has not submitted any assignments in the past week, indicating potential disengagement from the course.",
+            "severity": "high"
+          },
+          {
+            "alert_text": "The cohort CIS average has dropped below 0.5%, indicating a potential decline in overall understanding of course material.",
+            "severity": "critical"
+          }
+        ],
+        "recommended_interventions": [
+          {
+            "target": "Cohort",
+            "action": "Implement a peer-to-peer mentoring program to encourage students to support one another in understanding course material."
+          },
+          {
+            "target": "Lecturer",
+            "action": "Attend a workshop on effective teaching strategies for large cohorts, focusing on ways to promote student engagement and motivation."
+          }
+        ]
+      }
+    },
+    {
+      "recordedAt": "2026-04-14T15:32:40.815Z",
+      "payload": {
+        "lecturer_id": "kn7agmwyjyxjkdzz6425mg94nh817e6m",
+        "report_date": "2026-04-14",
+        "briefing_markdown": "# Lecturer Briefing\n\n**Daily Briefing for Lecturer kn7agmwyjyxjkdzz6425mg94nh817e6m**\n\n",
+        "priority_topics": [
+          {
+            "topic": "Mathematics",
+            "failure_rate_pct": 42,
+            "recommended_action": "Implement AI-powered adaptive quizzes to identify knowledge gaps and provide targeted support"
+          },
+          {
+            "topic": "Programming Fundamentals",
+            "failure_rate_pct": 38,
+            "recommended_action": "Collaborate with teaching assistants to develop additional coding exercises and examples"
+          },
+          {
+            "topic": "Data Structures",
+            "failure_rate_pct": 32,
+            "recommended_action": "Create interactive visualizations to illustrate complex data structure concepts"
+          }
+        ],
+        "at_risk_students": [
+          {
+            "student_id": "s123456",
+            "reason": "Dependence on AI-powered note-taking tools"
+          },
+          {
+            "student_id": "s987654",
+            "reason": "Inadequate participation in online discussions"
+          }
+        ],
+        "critical_alerts": [
+          {
+            "alert_text": "Student s123456 has not submitted any assignments in the past week",
+            "severity": "critical"
+          }
+        ],
+        "recommended_interventions": [
+          {
+            "target": "Student s123456",
+            "action": "Schedule a meeting to discuss assignment submission and provide additional support"
+          },
+          {
+            "target": "Teaching Assistants",
+            "action": "Develop additional coding exercises and examples for Programming Fundamentals"
+          }
+        ]
+      }
+    },
+    {
+      "recordedAt": "2026-04-14T15:32:46.187Z",
+      "payload": {
+        "lecturer_id": "kn7agmwyjyxjkdzz6425mg94nh817e6m",
+        "report_date": "2026-04-14",
+        "briefing_markdown": "# Lecturer Briefing\n\n\n\n",
+        "priority_topics": [
+          {
+            "topic": "Linear Algebra",
+            "failure_rate_pct": 42,
+            "recommended_action": "Provide additional practice problems on linear transformations and matrix operations, and offer office hours for extra support."
+          },
+          {
+            "topic": "Differential Equations",
+            "failure_rate_pct": 38,
+            "recommended_action": "Develop a set of example problems that apply differential equations to real-world scenarios, and create a study guide that summarizes key concepts."
+          },
+          {
+            "topic": "Calculus",
+            "failure_rate_pct": 32,
+            "recommended_action": "Create a series of video lectures that explain key concepts in calculus, and provide a set of practice problems with solutions."
+          }
+        ],
+        "at_risk_students": [
+          {
+            "student_id": "s123456",
+            "reason": "CIS dropped by 7% due to AI scaffolding dependency"
+          },
+          {
+            "student_id": "s234567",
+            "reason": "CIS dropped by 9% due to AI scaffolding dependency"
+          }
+        ],
+        "critical_alerts": [
+          {
+            "alert_text": "Student s345678 has a CIS drop of 12% due to AI scaffolding dependency, and has not attended any classes in the past week.",
+            "severity": "critical"
+          }
+        ],
+        "recommended_interventions": [
+          {
+            "target": "Student s123456",
+            "action": "Schedule a meeting with the student to discuss their progress and develop a plan to reduce their AI scaffolding dependency."
+          },
+          {
+            "target": "Student s234567",
+            "action": "Reach out to the student via email to encourage them to attend classes and seek additional support."
+          }
+        ]
+      }
+    },
+    {
+      "recordedAt": "2026-04-14T15:32:58.789Z",
+      "payload": {
+        "lecturer_id": "kn7agmwyjyxjkdzz6425mg94nh817e6m",
+        "report_date": "2026-04-14",
+        "briefing_markdown": "# Lecturer Briefing\n\nReview cohort CIS trend and consider AI scaffolding adjustments.\nIdentify and address failing topics.\n\n",
+        "priority_topics": [
+          {
+            "topic": "Data Analysis",
+            "failure_rate_pct": 42,
+            "recommended_action": "Deliver a supplementary lecture on data visualization techniques, focusing on real-world applications."
+          },
+          {
+            "topic": "Machine Learning",
+            "failure_rate_pct": 38,
+            "recommended_action": "Create a practice problem set with ML-focused case studies, emphasizing problem-solving skills."
+          },
+          {
+            "topic": "Python Programming",
+            "failure_rate_pct": 45,
+            "recommended_action": "Schedule an in-class coding session, providing students with personalized feedback on their Python projects."
+          }
+        ],
+        "at_risk_students": [
+          {
+            "student_id": "s123456",
+            "reason": "Excessive AI scaffolding dependency, impacting CIS by 7.2%."
+          },
+          {
+            "student_id": "s901234",
+            "reason": "Inconsistent participation in class discussions, affecting CIS by 5.8%."
+          }
+        ],
+        "critical_alerts": [
+          {
+            "alert_text": "Student s123456's CIS has dropped by 12.5% over the past week.",
+            "severity": "critical"
+          }
+        ],
+        "recommended_interventions": [
+          {
+            "target": "Student Support",
+            "action": "Schedule one-on-one meetings with students exhibiting AI dependency or low CIS."
+          },
+          {
+            "target": "Teaching Materials",
+            "action": "Review and update course materials to ensure they align with the cohort's learning needs."
+          }
+        ]
+      }
+    },
+    {
+      "recordedAt": "2026-04-14T15:39:21.043Z",
+      "payload": {
+        "lecturer_id": "kn7agmwyjyxjkdzz6425mg94nh817e6m",
+        "report_date": "2026-04-14",
+        "briefing_markdown": "# Lecturer Briefing\n\n**Cohort Intelligence Report for April 14, 2026**\n\n**Key Findings:**\n\n* Cohort CIS average is stable.\n\n**Recommendations for Improvement:**\n\n* Analyze historical data to identify potential knowledge gaps.\n* Develop targeted interventions to address these gaps.\n\n**Action Items:**\n\n* Review and adjust the curriculum to better align with student needs.\n* Monitor student progress closely to identify early warning signs of struggling learners.\n\n",
+        "priority_topics": [
+          {
+            "topic": "Calculus",
+            "failure_rate_pct": 40,
+            "recommended_action": "Implement additional practice exercises and provide one-on-one support for struggling students."
+          },
+          {
+            "topic": "Linear Algebra",
+            "failure_rate_pct": 35,
+            "recommended_action": "Develop a series of video tutorials to supplement textbook material and provide extra practice problems."
+          },
+          {
+            "topic": "Differential Equations",
+            "failure_rate_pct": 30,
+            "recommended_action": "Host a review session for students to clarify any misunderstandings and provide additional support."
+          }
+        ],
+        "at_risk_students": [
+          {
+            "student_id": "s123456",
+            "reason": "AI scaffolding dependency"
+          },
+          {
+            "student_id": "s234567",
+            "reason": "AI scaffolding dependency"
+          }
+        ],
+        "critical_alerts": [
+          {
+            "alert_text": "Student s123456 is at risk of failing the course due to AI scaffolding dependency.",
+            "severity": "high"
+          },
+          {
+            "alert_text": "Student s234567 is at risk of failing the course due to AI scaffolding dependency.",
+            "severity": "high"
+          }
+        ],
+        "recommended_interventions": [
+          {
+            "target": "Student s123456",
+            "action": "Provide one-on-one support and develop a personalized learning plan."
+          },
+          {
+            "target": "Student s234567",
+            "action": "Provide one-on-one support and develop a personalized learning plan."
+          }
+        ]
+      }
+    },
+    {
+      "recordedAt": "2026-04-14T15:40:13.571Z",
+      "payload": {
+        "lecturer_id": "kn7agmwyjyxjkdzz6425mg94nh817e6m",
+        "report_date": "2026-04-14",
+        "briefing_markdown": "# Lecturer Briefing\n\n**Cohort Briefing for kn7agmwyjyxjkdzz6425mg94nh817e6m - 2026-04-14**\n\n",
+        "priority_topics": [
+          {
+            "topic": "Mathematics",
+            "failure_rate_pct": 60,
+            "recommended_action": "Provide additional support for students struggling with algebraic equations"
+          },
+          {
+            "topic": "Computer Science",
+            "failure_rate_pct": 55,
+            "recommended_action": "Develop a step-by-step guide for programming assignments to reduce confusion"
+          },
+          {
+            "topic": "Physics",
+            "failure_rate_pct": 50,
+            "recommended_action": "Create a video tutorial series explaining key concepts in mechanics"
+          }
+        ],
+        "at_risk_students": [
+          {
+            "student_id": "s123456789",
+            "reason": "Dependence on AI scaffolding for problem-solving"
+          },
+          {
+            "student_id": "s987654321",
+            "reason": "Inconsistent attendance and lack of engagement in class"
+          }
+        ],
+        "critical_alerts": [
+          {
+            "alert_text": "Student s123456789 has a CIS drop of 12% due to AI dependency, requiring immediate attention",
+            "severity": "critical"
+          }
+        ],
+        "recommended_interventions": [
+          {
+            "target": "Student Support Team",
+            "action": "Develop a plan to reduce AI dependency among students"
+          },
+          {
+            "target": "Teaching Staff",
+            "action": "Collaborate to create a comprehensive review of course materials and adjust accordingly"
+          }
+        ]
+      }
+    },
+    {
+      "recordedAt": "2026-04-14T15:40:26.447Z",
+      "payload": {
+        "lecturer_id": "kn7agmwyjyxjkdzz6425mg94nh817e6m",
+        "report_date": "2026-04-14",
+        "briefing_markdown": "# Lecturer Briefing\n\n**Cohort Intelligence Briefing for Lecturer kn7agmwyjyxjkdzz6425mg94nh817e6m**\n\n**Current Cohort CIS Trend:** Stable\n\n**Top 3 Failing Topics:**\n\n",
+        "priority_topics": [
+          {
+            "topic": "Calculus II",
+            "failure_rate_pct": 35,
+            "recommended_action": "Review and revise the Calculus II lecture notes to ensure clarity and accuracy"
+          },
+          {
+            "topic": "Linear Algebra",
+            "failure_rate_pct": 40,
+            "recommended_action": "Provide additional practice problems for Linear Algebra to help students reinforce their understanding"
+          },
+          {
+            "topic": "Differential Equations",
+            "failure_rate_pct": 45,
+            "recommended_action": "Offer one-on-one tutoring sessions for students struggling with Differential Equations"
+          }
+        ],
+        "at_risk_students": [
+          {
+            "student_id": "s123456",
+            "reason": "AI scaffolding dependency"
+          },
+          {
+            "student_id": "s234567",
+            "reason": "Lack of engagement in class discussions"
+          }
+        ],
+        "critical_alerts": [
+          {
+            "alert_text": "Student s123456 has shown significant dependence on AI scaffolding, impacting their understanding of key concepts.",
+            "severity": "critical"
+          }
+        ],
+        "recommended_interventions": [
+          {
+            "target": "Cohort",
+            "action": "Implement a peer-to-peer learning program to foster collaboration and knowledge sharing"
+          },
+          {
+            "target": "Lecturer",
+            "action": "Review and adjust teaching strategies to better support students with varying learning needs"
+          }
+        ]
+      }
+    },
+    {
+      "recordedAt": "2026-04-14T15:42:12.293Z",
+      "payload": {
+        "lecturer_id": "kn7agmwyjyxjkdzz6425mg94nh817e6m",
+        "report_date": "2026-04-14",
+        "briefing_markdown": "# Lecturer Briefing\n\n**Cohort Intelligence Briefing for Lecturer kn7agmwyjyxjkdzz6425mg94nh817e6m**\n\n",
+        "priority_topics": [
+          {
+            "topic": "Data Structures",
+            "failure_rate_pct": 42,
+            "recommended_action": "Schedule an additional review session on data structures, focusing on dynamic memory allocation and linked lists."
+          },
+          {
+            "topic": "Algorithms",
+            "failure_rate_pct": 38,
+            "recommended_action": "Develop a set of practice problems that cover common algorithmic techniques, such as sorting and searching."
+          },
+          {
+            "topic": "Object-Oriented Programming",
+            "failure_rate_pct": 35,
+            "recommended_action": "Create a tutorial on object-oriented programming principles, emphasizing encapsulation, inheritance, and polymorphism."
+          }
+        ],
+        "at_risk_students": [
+          {
+            "student_id": "s123456",
+            "reason": "Dependence on AI scaffolding for code completion tasks"
+          },
+          {
+            "student_id": "s234567",
+            "reason": "Struggling to understand the concept of recursion"
+          }
+        ],
+        "critical_alerts": [
+          {
+            "alert_text": "Student s123456 has shown a significant drop in CIS due to AI scaffolding dependency, requiring immediate attention.",
+            "severity": "high"
+          }
+        ],
+        "recommended_interventions": [
+          {
+            "target": "Cohort",
+            "action": "Implement a peer-to-peer review system to encourage students to learn from each other's strengths and weaknesses."
+          },
+          {
+            "target": "Lecturer",
+            "action": "Schedule a meeting with the course instructor to discuss potential adjustments to the curriculum and teaching methods."
+          }
+        ]
+      }
+    },
+    {
+      "recordedAt": "2026-04-14T15:51:49.965Z",
+      "payload": {
+        "lecturer_id": "kn7agmwyjyxjkdzz6425mg94nh817e6m",
+        "report_date": "2026-04-14",
+        "briefing_markdown": "# Lecturer Briefing\n\n**Cohort Intelligence Briefing for kn7agmwyjyxjkdzz6425mg94nh817e6m, 2026-04-14**\n\n",
+        "priority_topics": [
+          {
+            "topic": "Mathematics",
+            "failure_rate_pct": 45,
+            "recommended_action": "Implement AI-powered math practice exercises in the next lecture"
+          },
+          {
+            "topic": "Programming Fundamentals",
+            "failure_rate_pct": 38,
+            "recommended_action": "Schedule a review session for programming concepts and syntax"
+          },
+          {
+            "topic": "Data Analysis",
+            "failure_rate_pct": 42,
+            "recommended_action": "Provide additional resources on data visualization and interpretation"
+          }
+        ],
+        "at_risk_students": [
+          {
+            "student_id": "s123456",
+            "reason": "Dependence on AI-powered note-taking tools"
+          },
+          {
+            "student_id": "s234567",
+            "reason": "Inadequate preparation for assessments"
+          }
+        ],
+        "critical_alerts": [
+          {
+            "alert_text": "Student s123456 has been flagged for academic dishonesty due to excessive AI-powered note-taking usage",
+            "severity": "critical"
+          }
+        ],
+        "recommended_interventions": [
+          {
+            "target": "Cohort",
+            "action": "Increase frequency of review sessions and practice exercises"
+          },
+          {
+            "target": "Lecturer",
+            "action": "Develop a plan to reduce AI dependency among students"
+          }
+        ]
+      }
+    },
+    {
+      "recordedAt": "2026-09-30T18:09:15.206Z",
+      "payload": {
+        "lecturer_id": "kn7agmwyjyxjkdzz6425mg94nh817e6m",
+        "report_date": "2026-09-30",
+        "briefing_markdown": "# Lecturer Briefing\n\nThis is a fallback briefing generated without LLM output due to upstream timeouts.\n\n## Priority Topics\n- No failing topics detected.\n\n## At-Risk Students\n- kn7ah8mbf5vtvygkke7p7502v1815hx0: High risk level detected\n- kn73fxb2eh10snz8wtzsb4pf9n84mz1v: High risk level detected\n",
+        "priority_topics": [],
+        "at_risk_students": [
+          {
+            "student_id": "kn7ah8mbf5vtvygkke7p7502v1815hx0",
+            "reason": "High risk level detected"
+          },
+          {
+            "student_id": "kn73fxb2eh10snz8wtzsb4pf9n84mz1v",
+            "reason": "High risk level detected"
+          }
+        ],
+        "critical_alerts": [
+          {
+            "alert_text": "Student kn7ah8mbf5vtvygkke7p7502v1815hx0 requires immediate check-in (High risk level detected).",
+            "severity": "high"
+          },
+          {
+            "alert_text": "Student kn73fxb2eh10snz8wtzsb4pf9n84mz1v requires immediate check-in (High risk level detected).",
+            "severity": "high"
+          }
+        ],
+        "recommended_interventions": []
+      }
+    },
+    {
+      "recordedAt": "2026-09-30T18:16:39.414Z",
+      "payload": {
+        "lecturer_id": "kn7agmwyjyxjkdzz6425mg94nh817e6m",
+        "report_date": "2026-09-30",
+        "briefing_markdown": "# Lecturer Briefing\n\n# Daily Cohort Intelligence Briefing\n\n**Date:** September 30, 2026  \n**Lecturer ID:** kn7agmwyjyxjkdzz6425mg94nh817e6m  \n**Cohort CIS Average:** 6/10 (Stable)  \n\n---\n\n### Executive Summary\nWhile the overall cohort Cognitive Independence Score (CIS) remains stable at a moderate **6/10**, we have detected a critical vulnerability: **severe AI scaffolding dependency** in key students. This dependency is masking underlying conceptual gaps. Immediate intervention is required to transition these students from passive AI consumers to independent problem solvers.\n\n### Critical Alerts\n*   **AI Dependency Warning:** Two students have shown a CIS drop of **> 5%** directly correlated with the fading of AI scaffolding. They are unable to perform when the AI assistance level is reduced.\n*   **Stagnant CIS Trend:** The cohort average has plateaued. To break this ceiling, we must transition from guided exercises to unassisted code synthesis.\n\n### Action Plan for Today\n1.  **Lock AI Scaffolding:** Manually override and reduce the AI assistance level to 10% for the flagged students to force manual syntax entry.\n2.  **Conduct a \"Blind\" Debugging Lab:** Dedicate the first 20 minutes of the next session to a pen-and-paper or locked-IDE debugging exercise.\n\n",
+        "priority_topics": [
+          {
+            "topic": "Independent Code Synthesis",
+            "failure_rate_pct": 45,
+            "recommended_action": "Run a 'no-copilot' lab session where students must write basic loops and conditional structures with local documentation only."
+          },
+          {
+            "topic": "Manual Syntax & Error Tracing",
+            "failure_rate_pct": 38,
+            "recommended_action": "Provide intentionally broken code blocks. Have students manually trace variables and identify syntax errors without compiling or using LLM debuggers."
+          },
+          {
+            "topic": "Algorithmic Logic & Pseudocoding",
+            "failure_rate_pct": 30,
+            "recommended_action": "Require students to submit a handwritten flowchart or pseudocode diagram before they are granted access to the coding environment."
+          }
+        ],
+        "at_risk_students": [
+          {
+            "student_id": "kn7ah8mbf5vtvygkke7p7502v1815hx0",
+            "reason": "CIS dropped > 5% this week. Highly dependent on AI scaffolding; performance plummets when auto-complete and code generation features are faded."
+          },
+          {
+            "student_id": "kn73fxb2eh10snz8wtzsb4pf9n84mz1v",
+            "reason": "High risk level detected. Student copy-pastes large blocks of AI-generated code without demonstrating comprehension during follow-up micro-assessments."
+          }
+        ],
+        "critical_alerts": [
+          {
+            "alert_text": "Severe AI Scaffolding Dependency detected in students kn7ah8mbf5vtvygkke7p7502v1815hx0 and kn73fxb2eh10snz8wtzsb4pf9n84mz1v.",
+            "severity": "critical"
+          },
+          {
+            "alert_text": "Cohort CIS average is stagnant at 6/10, indicating a systemic reliance on real-time hints.",
+            "severity": "high"
+          }
+        ],
+        "recommended_interventions": [
+          {
+            "target": "kn7ah8mbf5vtvygkke7p7502v1815hx0 & kn73fxb2eh10snz8wtzsb4pf9n84mz1v",
+            "action": "Schedule a 10-minute diagnostic check-in. Temporarily disable their AI code-generation plugins and require them to verbally explain their code logic line-by-line."
+          },
+          {
+            "target": "Entire Cohort",
+            "action": "Implement a 'Flipped Classroom' segment where students are given an AI-generated solution and must write the test cases to prove it works, shifting focus from generation to verification."
+          }
+        ]
+      }
+    },
+    {
+      "recordedAt": "2026-09-30T18:17:28.409Z",
+      "payload": {
+        "lecturer_id": "kn7agmwyjyxjkdzz6425mg94nh817e6m",
+        "report_date": "2026-09-30",
+        "briefing_markdown": "# Lecturer Briefing\n\n# Daily Cohort Intelligence Briefing\n\n**To:** Lecturer kn7agmwyjyxjkdzz6425mg94nh817e6m  \n**Date:** September 30, 2026  \n**Cohort:** Batch j97ckpwdqf7jj8bvvvkwbha7dx8fdayq  \n**Cohort CIS Average:** 6.0/10 (Stable but critical)\n\n### Executive Summary\nWhile the cohort's overall Cognitive Independence Score (CIS) remains stable at a moderate **6.0**, we have detected a critical vulnerability: **severe AI scaffolding dependency** in two specific students. These students are failing to transition from AI-assisted generation to independent code execution. Immediate, targeted action is required to prevent them from falling permanently behind.\n\n### Critical Alerts\n*   **AI Scaffolding Collapse:** Students `kn7ah8mbf5vtvygkke7p7502v1815hx0` and `kn73fxb2eh10snz8wtzsb4pf9n84mz1v` have experienced a severe CIS drop (> 5%) directly correlated with the reduction of AI scaffolding. They are currently unable to solve problems when AI assistance is throttled.\n\n### Immediate Action Plan\n1.  **Throttle AI Assistance:** Temporarily restrict AI generation features in the CogAIt IDE for the two flagged students to force manual syntax engagement.\n2.  **Conduct 'No-AI' Code Explanations:** During the next lab, have these students verbally explain their logic flow before writing any code.\n\n",
+        "priority_topics": [
+          {
+            "topic": "Independent Code Construction & Syntax Recall",
+            "failure_rate_pct": 48,
+            "recommended_action": "Conduct a 15-minute live, 'no-AI' whiteboard coding session. Force students to write basic loops and conditionals without IDE autocomplete or Copilot assistance."
+          },
+          {
+            "topic": "Algorithmic Logic & Flowcharting",
+            "failure_rate_pct": 42,
+            "recommended_action": "Assign a pen-and-paper tracing exercise. Students must manually trace variables through a nested loop structure and submit the state table."
+          },
+          {
+            "topic": "Error Debugging & Stack Trace Analysis",
+            "failure_rate_pct": 35,
+            "recommended_action": "Provide a pre-broken code snippet with syntax and logical errors. Students must diagnose and fix the errors without using LLM explanation tools."
+          }
+        ],
+        "at_risk_students": [
+          {
+            "student_id": "kn7ah8mbf5vtvygkke7p7502v1815hx0",
+            "reason": "CIS dropped > 5% due to severe AI scaffolding dependency. Student fails to progress when AI code generation is throttled."
+          },
+          {
+            "student_id": "kn73fxb2eh10snz8wtzsb4pf9n84mz1v",
+            "reason": "High risk level detected. Extreme reliance on AI-generated templates; independent logic synthesis is critically low."
+          }
+        ],
+        "critical_alerts": [
+          {
+            "alert_text": "Students kn7ah8mbf5vtvygkke7p7502v1815hx0 and kn73fxb2eh10snz8wtzsb4pf9n84mz1v show severe AI scaffolding dependency, causing their CIS to plummet when scaffolding is removed.",
+            "severity": "critical"
+          }
+        ],
+        "recommended_interventions": [
+          {
+            "target": "AI-Dependent Students (kn7ah8mbf5vtvygkke7p7502v1815hx0, kn73fxb2eh10snz8wtzsb4pf9n84mz1v)",
+            "action": "Implement a temporary 'AI-free' restriction in the CogAIt IDE for these students and schedule a 10-minute 1-on-1 code explanation review."
+          },
+          {
+            "target": "Cohort (Batch j97ckpwdqf7jj8bvvvkwbha7dx8fdayq)",
+            "action": "Introduce a 'flipped classroom' session where students must explain AI-generated code line-by-line to a peer to rebuild conceptual understanding."
+          }
+        ]
+      }
+    }
+  ],
+  "cohortSummaries": [],
+  "lastUpdatedAt": "2026-09-30T18:17:28.409Z"
+}

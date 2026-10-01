@@ -1,7 +1,7 @@
 import { defineSchema, defineTable } from "convex/server";
 import { v } from "convex/values";
 import { authTables } from "@convex-dev/auth/server";
-import { contentBlockValidator } from "./domain/contentBlocks";
+import { contentBlockValidator } from "./domain/contentBlocks.js";
 
 const applicationTables = {
   organizations: defineTable({
@@ -56,10 +56,15 @@ const applicationTables = {
     ),
     aiProcessingError: v.optional(v.string()),
     aiJobId: v.optional(v.id("facultyAssignmentJobs")),
+    // Student-specific deep-dive assignments (created by Agent 5)
+    targetStudentId: v.optional(v.id("users")),
+    isDeepDive: v.optional(v.boolean()),
+    sourceAssignmentId: v.optional(v.id("assignments")),
   }).index("by_lecturer", ["lecturerId"])
     .index("by_active", ["isActive"])
     .index("by_organizationId", ["organizationId"])
-    .index("by_org_and_lecturer", ["organizationId", "lecturerId"]),
+    .index("by_org_and_lecturer", ["organizationId", "lecturerId"])
+    .index("by_org_target_student", ["organizationId", "targetStudentId"]),
 
   classrooms: defineTable({
     organizationId: v.id("organizations"),
@@ -458,6 +463,96 @@ const applicationTables = {
     lastUpdated: v.number(),
   }).index("by_org_and_day", ["organizationId", "dayStart"])
     .index("by_organizationId", ["organizationId"]),
+
+  // Agent conversation threads (post-assignment analyst)
+  agentConversations: defineTable({
+    organizationId: v.id("organizations"),
+    studentId: v.id("users"),
+    assignmentId: v.id("assignments"),
+    messages: v.array(
+      v.object({
+        role: v.union(v.literal("agent"), v.literal("student")),
+        content: v.string(),
+        timestamp: v.number(),
+        messageId: v.optional(v.string()),
+        inReplyTo: v.optional(v.string()),
+      }),
+    ),
+    status: v.union(v.literal("analyzing"), v.literal("negotiating"), v.literal("searching"), v.literal("active"), v.literal("closed"), v.literal("failed")),
+    deepDiveRequested: v.boolean(),
+    weakTopics: v.optional(v.array(v.string())),
+    createdAt: v.number(),
+  })
+    .index("by_org_student_assignment", ["organizationId", "studentId", "assignmentId"])
+    .index("by_organizationId", ["organizationId"]),
+
+  // Agent 2 structured analysis output
+  performanceReports: defineTable({
+    studentId: v.id("users"),
+    assignmentId: v.id("assignments"),
+    topicPerformance: v.array(v.object({
+      topic_name: v.string(),
+      max_scaffold_depth: v.number(),
+      classification: v.string(),
+    })),
+    weakTopics: v.array(v.string()),
+    strongTopics: v.array(v.string()),
+    remediationRecommended: v.boolean(),
+    sessionIntegrityScore: v.number(),
+    timeAvailableForRemediation: v.boolean(),
+    createdAt: v.number(),
+  })
+    .index("by_student", ["studentId"])
+    .index("by_student_assignment", ["studentId", "assignmentId"]),
+
+  // Deep-dive practice sessions (created by Agent 5)
+  deepDiveSessions: defineTable({
+    organizationId: v.id("organizations"),
+    studentId: v.id("users"),
+    sourceAssignmentId: v.id("assignments"),
+    weakTopics: v.array(v.string()),
+    studentPreferences: v.optional(v.string()),
+    status: v.union(
+      v.literal("pending"),
+      v.literal("generating"),
+      v.literal("ready"),
+      v.literal("failed"),
+    ),
+    generatedAssignmentId: v.optional(v.id("assignments")),
+    webSources: v.optional(v.array(v.string())),
+    questionCount: v.optional(v.number()),
+    error: v.optional(v.string()),
+    createdAt: v.number(),
+  })
+    .index("by_org_and_student", ["organizationId", "studentId"])
+    .index("by_org_source_student", ["organizationId", "sourceAssignmentId", "studentId"])
+    .index("by_organizationId", ["organizationId"]),
+
+  pendingRemediations: defineTable({
+    student_id: v.string(),
+    assignment_id: v.string(),
+    weak_topics: v.array(v.string()),
+    status: v.union(
+      v.literal("awaiting_consent"),
+      v.literal("accepted"),
+      v.literal("declined"),
+      v.literal("expired"),
+      v.literal("postponed"),
+    ),
+    created_at: v.number(),
+    expires_at: v.number(),
+    preference: v.optional(v.union(
+      v.literal("pyqs"),
+      v.literal("fundamentals"),
+      v.literal("theory"),
+      v.literal("all"),
+    )),
+    responded_at: v.optional(v.number()),
+    decline_reason: v.optional(v.string()),
+  })
+    .index("by_student_status", ["student_id", "status"])
+    .index("by_assignment_student_status", ["assignment_id", "student_id", "status"])
+    .index("by_status_expires", ["status", "expires_at"]),
 };
 
 export default defineSchema({

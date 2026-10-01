@@ -1,4 +1,4 @@
-import { Fragment } from "react";
+import { Fragment, useEffect, useMemo, useRef } from "react";
 
 type MathRendererProps = {
   text: string;
@@ -6,28 +6,57 @@ type MathRendererProps = {
 };
 
 export function MathRenderer({ text, className }: MathRendererProps) {
-  const parts = text.split(/(\$\$[\s\S]*?\$\$|\$[^$]*?\$)/g);
+  const rootRef = useRef<HTMLDivElement>(null);
+  const parts = useMemo(() => text.split(/(\$\$[\s\S]*?\$\$|\$[^$]*?\$)/g), [text]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+    if (!window.MathJax && !document.getElementById("cogait-mathjax")) {
+      (window as any).MathJax = {
+        tex: { inlineMath: [["\\(", "\\)"], ["$", "$"]], displayMath: [["\\[", "\\]"], ["$$", "$$"]] },
+        svg: { fontCache: "global" },
+      };
+      const script = document.createElement("script");
+      script.id = "cogait-mathjax";
+      script.src = "https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js";
+      script.async = true;
+      document.head.appendChild(script);
+    }
+    const typeset = async () => {
+      if (!rootRef.current || !window.MathJax?.typesetPromise) {
+        return;
+      }
+      try {
+        await window.MathJax.typesetPromise([rootRef.current]);
+      } catch {
+        // Keep readable TeX if typesetting fails.
+      }
+    };
+    void typeset();
+  }, [parts]);
 
   return (
-    <div className={className}>
+    <div ref={rootRef} className={className}>
       {parts.map((part, index) => {
         if (part.startsWith("$$") && part.endsWith("$$")) {
           const math = part.slice(2, -2).trim();
           return (
-            <pre
+            <div
               key={`${index}-${math}`}
-              className="my-2 overflow-x-auto rounded-md bg-slate-100 px-3 py-2 text-sm text-slate-900"
+              className="my-2 overflow-x-auto"
             >
-              {math}
-            </pre>
+              {`\\[${math}\\]`}
+            </div>
           );
         }
         if (part.startsWith("$") && part.endsWith("$")) {
           const math = part.slice(1, -1).trim();
           return (
-            <code key={`${index}-${math}`} className="rounded bg-slate-100 px-1 py-0.5 text-slate-900">
-              {math}
-            </code>
+            <span key={`${index}-${math}`} className="inline-block align-middle">
+              {`\\(${math}\\)`}
+            </span>
           );
         }
         return <Fragment key={`${index}-${part}`}>{part}</Fragment>;

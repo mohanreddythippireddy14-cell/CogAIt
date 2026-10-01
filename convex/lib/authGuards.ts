@@ -91,10 +91,22 @@ export async function requireRoleFromAction(ctx: any, role: Role): Promise<Id<"u
   return user.userId;
 }
 
-export async function requireAuthFromAction(ctx: any): Promise<Id<"users">> {
+export async function requireAuthFromAction(ctx: any): Promise<{
+  userId: Id<"users">;
+  profile: {
+    organizationId: Id<"organizations">;
+    role: Role;
+  };
+}> {
   const user = await ctx.runQuery(api.users.loggedInUserWithProfile, {});
-  if (!user?.userId) {
-    throw new Error("Not authenticated");
+  if (!user?.userId || !user.profile || !user.profile.organizationId) {
+    throw new Error("Not authenticated or missing profile/organization");
   }
-  return user.userId;
+  return {
+    userId: user.userId,
+    profile: {
+      organizationId: user.profile.organizationId,
+      role: user.profile.role as Role,
+    },
+  };
 }

@@ -14,6 +14,7 @@
   },
   "include": [
     "runtimeValidation/**/*.ts",
+    "convex/domain/aiQuestionNormalization.ts",
     "convex/infrastructure/featureFlags.ts",
     "convex/infrastructure/logger.ts"
   ]

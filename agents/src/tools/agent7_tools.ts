@@ -1,5 +1,6 @@
 // Tools for Agent 7 (Recommendation Agent)
 import { convex } from '../memory/convex_client.js';
+import { saveLecturerBriefing } from '../memory/long_term_memory.js';
 
 export const recommendationEngine = async (cohortData: any): Promise<any> => {
   console.log(`[RecommendationEngine] Generating prioritized interventions...`);
@@ -11,6 +12,7 @@ export const briefingFormatter = (summary: string, data: any): string => {
 };
 
 export const convexWriteBriefing = async (lecturerId: string, briefing: any): Promise<void> => {
+  await saveLecturerBriefing(lecturerId, briefing);
   console.log(`[ConvexWriteBriefing] Saved briefing for lecturer ${lecturerId}`);
 };
 

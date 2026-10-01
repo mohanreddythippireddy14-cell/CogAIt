@@ -1,0 +1,94 @@
+﻿ M .gitignore
+ M README.md
+ M agents/package.json
+ M agents/src/agent1_socratic/index.ts
+ M agents/src/agent2_analyst/index.ts
+ M agents/src/agent3_content/index.ts
+ M agents/src/agent4_longterm/index.ts
+ M agents/src/agent5_ingestion/index.ts
+ M agents/src/agent6_cohort/index.ts
+ M agents/src/agent7_recommendation/index.ts
+ M agents/src/agent8_judge/index.ts
+ M agents/src/guardrails/pii_detector.ts
+ M agents/src/guardrails/schema_validator.ts
+ M agents/src/hooks/post_hooks.ts
+ M agents/src/hooks/pre_hooks.ts
+ M agents/src/memory/convex_client.ts
+ M agents/src/middleware/negotiation_node.ts
+ M agents/src/pubsub/index.ts
+ M agents/src/tools/agent1_tools.ts
+ M agents/src/tools/agent2_tools.ts
+ M agents/src/tools/agent4_tools.ts
+ M agents/src/tools/agent5_tools.ts
+ M agents/src/tools/agent6_tools.ts
+ M agents/src/tools/agent7_tools.ts
+ M convex/_generated/api.d.ts
+ M convex/ai.ts
+ M convex/analytics.ts
+ M convex/assignments.ts
+ M convex/attempts.ts
+ M convex/classrooms.ts
+ M convex/dashboard/assignmentDashboard.ts
+ M convex/dashboard/studentProfile.ts
+ M convex/dashboard/teacherOverview.ts
+ M convex/domain/scoring.ts
+ M convex/facultyAssignments.ts
+ M convex/infrastructure/geminiClient.ts
+ M convex/lib/authGuards.ts
+ M convex/router.ts
+ M convex/schema.ts
+ M index.html
+ M package.json
+ D readme1.md
+ M runtimeValidation/runner.ts
+ M src/App.tsx
+ M src/ProfileMenu.tsx
+ M src/components/AppErrorBoundary.tsx
+ M src/components/AppLogo.tsx
+ M src/components/AssignmentAnalytics.tsx
+ M src/components/ContentBlocksRenderer.tsx
+ M src/components/CreateAIAssignment.tsx
+ M src/components/CreateAssignment.tsx
+ M src/components/EditAssignment.tsx
+ M src/components/JoinClassPage.tsx
+ M src/components/LecturerDashboard.tsx
+ M src/components/LiveSessionMonitor.tsx
+ M src/components/MathRenderer.tsx
+ M src/components/QuestionView.tsx
+ M src/components/StudentAnalytics.tsx
+ M src/components/StudentDashboard.tsx
+ M src/components/StudentResults.tsx
+ M src/index.css
+ M tailwind.config.js
+ M tsconfig.runtime.json
+ M vite.config.ts
+?? LICENSE
+?? PROJECT_AUDIT.md
+?? STRESS_TEST_SUITE.md
+?? _ui_replacement/
+?? agents/.memory/
+?? agents/src/memory/file_store.ts
+?? agents/src/memory/long_term_memory.ts
+?? agents/src/memory/short_term_memory.ts
+?? agents/src/pubsub/schemas/
+?? agents/src/scripts/
+?? convex/agentConversation.ts
+?? convex/deepDive.ts
+?? convex/demoSeed.ts
+?? convex/domain/aiPolicy.test.ts
+?? convex/domain/aiQuestionNormalization.ts
+?? convex/geminiProxy.ts
+?? convex/pendingRemediations.ts
+?? dist-validation-2/
+?? dist-validation/
+?? docs/_original/
+?? docs/_state/
+?? postcss.config.js
+?? public/spatial_ar.html
+?? runtimeValidation/aiQuestionValidation.ts
+?? spatial_ui.html
+?? src/components/RemediationConsent.tsx
+?? src/components/SpatialWrapper.tsx
+?? src/components/StudentClassroom.tsx
+?? tmp_pdf/
+?? ui_export_unpacked/

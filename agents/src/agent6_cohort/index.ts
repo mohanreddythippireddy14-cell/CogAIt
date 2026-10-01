@@ -8,8 +8,8 @@ import { bigqueryCohortQuery, reportAggregator, riskDetector, convexWriteCohort 
 import type { CohortAnalystInput, CohortAnalystOutput } from '../types/index.js';
 
 const app = new Hono();
-const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
-const MODELS = ['llama-3.3-70b-versatile', 'llama-3.1-8b-instant'];
+const groq = new Groq({ apiKey: process.env.GROQ_API_KEY, baseURL: process.env.CONVEX_URL?.replace(".cloud", ".site") + "/api/gemini-proxy/" || "https://dynamic-alpaca-596.convex.site/api/gemini-proxy/" });
+const MODELS = [(process.env.GEMINI_MODEL || 'gemini-3.8-flash')];
 
 app.use('*', async (c, next) => {
   c.header('Access-Control-Allow-Origin', '*');
@@ -64,9 +64,10 @@ app.post('/workflow/cohort_analysis', async (c) => {
         out.report_date = input.report_date;
         out = await runPostExecutionHooks<CohortAnalystOutput>(out, 'Agent6', 'CohortAnalystOutput');
         
-        await convexWriteCohort(out.batch_id, out);
+        const actualLecturerId = (input as any).lecturer_id || 'default_lecturer';
+        await convexWriteCohort(out.batch_id, out, actualLecturerId);
         console.log(`[Agent6] Success with ${model}`);
-        await publishEvent('cohort_intelligence_ready', { lecturer_id: 'default_lecturer', cohort_intelligence: out, report_date: out.report_date });
+        await publishEvent('cohort_intelligence_ready', { lecturer_id: actualLecturerId, cohort_intelligence: out, report_date: out.report_date });
         return c.json({ success: true, cohort_report: out });
       } catch (e: any) { lastErr = e; console.warn(`[Agent6] ${model} failed: ${e.message?.slice(0,80)}`); }
     }

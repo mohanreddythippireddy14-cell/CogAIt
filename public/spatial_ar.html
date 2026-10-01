@@ -1,0 +1,935 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CogAIt · Spatial AR Interface (Light Edition)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   RESET & VARIABLES (LIGHT/COLORFUL)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+:root {
+  --cyan: #00d4ff;
+  --violet: #8a2be2;
+  --pink: #ff1493;
+  --emerald: #00fa9a;
+  --amber: #ff8c00;
+  --bg-deep: #f0f4f8;
+}
+*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+html, body {
+  width: 100%; height: 100%; overflow: hidden;
+  background: var(--bg-deep);
+  font-family: 'Syne', sans-serif;
+  color: #1a1a2e;
+  cursor: none;
+}
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   FILM GRAIN
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+.grain {
+  position: fixed; inset: 0; z-index: 1; pointer-events: none;
+  opacity: 0.05;
+  mix-blend-mode: multiply;
+}
+.grain svg { width: 100%; height: 100%; }
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   AMBIENT BACKGROUND 
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+.ambient-bg {
+  position: fixed; inset: 0; z-index: 0; pointer-events: none;
+  background:
+    radial-gradient(circle at 15% 20%, rgba(255, 182, 193, 0.5) 0%, transparent 50%),
+    radial-gradient(circle at 85% 15%, rgba(135, 206, 250, 0.5) 0%, transparent 50%),
+    radial-gradient(circle at 50% 80%, rgba(255, 239, 150, 0.4) 0%, transparent 50%),
+    radial-gradient(circle at 80% 90%, rgba(152, 251, 152, 0.4) 0%, transparent 50%),
+    linear-gradient(180deg, #fdfbfb 0%, #ebedee 100%);
+  animation: bg-swirl 15s infinite alternate ease-in-out;
+}
+@keyframes bg-swirl {
+  0% { filter: hue-rotate(0deg) contrast(1.1); }
+  100% { filter: hue-rotate(25deg) contrast(1.1); }
+}
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   CUSTOM CURSOR
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+#cursor-ring, #cursor-dot {
+  position: fixed; pointer-events: none; z-index: 10000;
+  transform: translate(-50%, -50%);
+  transition: opacity 0.3s;
+}
+#cursor-ring {
+  width: 20px; height: 20px;
+  border: 1.5px solid var(--violet);
+  border-radius: 50%;
+  opacity: 0.6;
+  box-shadow: 0 0 10px rgba(138, 43, 226, 0.3);
+}
+#cursor-dot {
+  width: 4px; height: 4px;
+  background: var(--pink);
+  border-radius: 50%;
+  box-shadow: 0 0 8px rgba(255, 20, 147, 0.4);
+}
+body.expanded #cursor-ring,
+body.expanded #cursor-dot { opacity: 0; cursor: default; }
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   PERSPECTIVE CAMERA
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+#camera {
+  position: fixed; inset: 0; z-index: 10;
+  perspective: 1100px;
+  perspective-origin: 50% 30%;
+  pointer-events: none;
+}
+#world {
+  position: absolute; inset: 0;
+  transform-style: preserve-3d;
+  transform: rotateX(12deg) rotateY(-8deg);
+  pointer-events: none;
+  transition: opacity 0.5s;
+}
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   GROUND PLANE / DESK SURFACE
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+#ground {
+  position: absolute;
+  width: 180vw; height: 120vh;
+  left: 50%; top: 65%;
+  transform: translate(-50%, -50%) rotateX(62deg) translateZ(-80px);
+  transform-style: preserve-3d;
+  background:
+    linear-gradient(rgba(0,0,0,0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0,0,0,0.03) 1px, transparent 1px),
+    linear-gradient(135deg, rgba(255,255,255,0.8) 0%, rgba(240,245,250,0.9) 100%);
+  background-size: 40px 40px, 40px 40px, 100% 100%;
+  border: 1px solid rgba(255,255,255,0.5);
+  box-shadow: inset 0 0 100px rgba(255,255,255,0.8);
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.8s 0.2s;
+}
+body.scene-ready #ground { opacity: 1; }
+
+.ground-glow {
+  position: absolute; pointer-events: none;
+  width: 280px; height: 120px;
+  border-radius: 50%;
+  filter: blur(25px);
+  opacity: 0;
+  transition: opacity 0.8s 0.5s;
+}
+body.scene-ready .ground-glow { opacity: 1; }
+.ground-glow.g1 { left: 38%; top: 38%; background: rgba(0,0,0,0.08); }
+.ground-glow.g2 { left: 18%; top: 42%; background: rgba(0,0,0,0.06); }
+.ground-glow.g3 { left: 60%; top: 44%; background: rgba(0,0,0,0.05); }
+.ground-glow.g4 { left: 72%; top: 36%; background: rgba(0,0,0,0.07); }
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   FLOATING CARDS (3D SHELL)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+.ar-card {
+  position: absolute;
+  border-radius: 14px;
+  overflow: hidden;
+  pointer-events: all;
+  cursor: pointer;
+  transform-style: preserve-3d;
+  background: rgba(255, 255, 255, 0.2);
+  backdrop-filter: blur(25px) saturate(200%);
+  border: 1px solid rgba(255, 255, 255, 1);
+  box-shadow: 0 15px 40px rgba(0,0,0,0.08), inset 0 0 0 1px rgba(255,255,255,0.3);
+  opacity: 0;
+  will-change: transform, opacity, width, height;
+  transition:
+    transform 0.5s cubic-bezier(0.34,1.56,0.64,1),
+    opacity 0.5s cubic-bezier(0.34,1.56,0.64,1),
+    box-shadow 0.2s ease;
+}
+
+/* Glassmorphic bezel highlight */
+.ar-card::before {
+  content: '';
+  position: absolute; inset: 0;
+  border-radius: inherit;
+  background: linear-gradient(135deg, rgba(255,255,255,0.8), transparent 60%);
+  pointer-events: none;
+  z-index: 2;
+}
+
+/* Base sizes */
+.ar-card.card-dashboard { width: 300px; height: 400px; }
+.ar-card.card-assignments { width: 220px; height: 340px; }
+.ar-card.card-analytics { width: 260px; height: 210px; }
+.ar-card.card-cis { width: 180px; height: 200px; }
+
+/* Hover states */
+.ar-card:hover {
+  z-index: 100;
+  box-shadow: 0 25px 60px rgba(0,0,0,0.12), inset 0 0 0 2px rgba(255,255,255,0.6);
+}
+
+/* Iframe inside card */
+.ar-card iframe {
+  position: absolute; top: 0; left: 0;
+  border: none; border-radius: 0;
+  pointer-events: none;
+  /* Origin top-left avoids awkward scaling off center */
+  transform-origin: top left;
+}
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   EXPANDED STATE
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+.ar-card.expanding {
+  z-index: 9999;
+  border-radius: 0 !important;
+  border-color: transparent !important;
+  box-shadow: none !important;
+  backdrop-filter: none !important;
+  transition:
+    transform 400ms cubic-bezier(0.34,1.2,0.64,1),
+    width 400ms cubic-bezier(0.34,1.2,0.64,1),
+    height 400ms cubic-bezier(0.34,1.2,0.64,1),
+    border-radius 400ms !important;
+}
+.ar-card.expanding::before { display: none; }
+
+.ar-card.expanded {
+  width: 100% !important; 
+  height: 100% !important;
+  border-radius: 0 !important;
+  border-color: transparent !important;
+  box-shadow: none !important;
+  backdrop-filter: none !important;
+  transform: translate(-50%, -50%) rotateX(0deg) rotateY(0deg) translateZ(0px) !important;
+  z-index: 9999;
+}
+.ar-card.expanded::before { display: none; }
+.ar-card.expanded iframe {
+  transform: none !important;
+  pointer-events: all;
+}
+
+/* Sibling dimming */
+.ar-card.dimmed {
+  opacity: 0.2 !important;
+  filter: blur(8px);
+  pointer-events: none !important;
+  transition: opacity 150ms, filter 150ms !important;
+}
+.ar-card.hidden-card { display: none !important; }
+
+/* Back button */
+#back-btn {
+  position: fixed; top: 20px; left: 20px; z-index: 99999;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px; font-weight: 700; letter-spacing: 1px;
+  color: #1a1a2e;
+  background: rgba(255,255,255,0.8);
+  border: 1px solid rgba(0,0,0,0.1);
+  padding: 10px 20px;
+  border-radius: 8px;
+  cursor: pointer;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.3s, background 0.2s, box-shadow 0.2s, transform 0.2s;
+  backdrop-filter: blur(12px);
+  box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+}
+#back-btn:hover {
+  background: rgba(255,255,255,1);
+  box-shadow: 0 6px 20px rgba(0,0,0,0.12);
+  transform: translateY(-2px);
+}
+#back-btn.visible {
+  opacity: 1;
+  pointer-events: all;
+}
+
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   DECORATIVE: CSS 3D CUBOIDS
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+#cuboid-stack {
+  position: absolute;
+  left: 16%; bottom: 32%;
+  transform-style: preserve-3d;
+  transform: rotateX(-5deg) rotateY(15deg) translateZ(0px);
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 1s 0.6s;
+}
+body.scene-ready #cuboid-stack { opacity: 1; }
+
+.cuboid { position: absolute; transform-style: preserve-3d; }
+.cuboid .face { position: absolute; backface-visibility: hidden; }
+
+/* Cuboid 1 — tall */
+.cub1 { bottom: 0; left: 0; }
+.cub1 .top   { width: 30px; height: 20px; background: rgba(255,182,193,0.8); transform: rotateX(90deg) translateZ(60px); }
+.cub1 .front { width: 30px; height: 60px; background: rgba(255,182,193,0.6); transform: translateZ(10px); }
+.cub1 .right { width: 20px; height: 60px; background: rgba(255,182,193,0.4); transform: rotateY(90deg) translateZ(30px); }
+
+/* Cuboid 2 — medium */
+.cub2 { bottom: 0; left: 40px; }
+.cub2 .top   { width: 25px; height: 18px; background: rgba(135,206,250,0.8); transform: rotateX(90deg) translateZ(40px); }
+.cub2 .front { width: 25px; height: 40px; background: rgba(135,206,250,0.6); transform: translateZ(9px); }
+.cub2 .right { width: 18px; height: 40px; background: rgba(135,206,250,0.4); transform: rotateY(90deg) translateZ(25px); }
+
+/* Cuboid 3 — short */
+.cub3 { bottom: 0; left: 18px; }
+.cub3 .top   { width: 22px; height: 16px; background: rgba(253,203,110,0.8); transform: rotateX(90deg) translateZ(25px); }
+.cub3 .front { width: 22px; height: 25px; background: rgba(253,203,110,0.6); transform: translateZ(8px); }
+.cub3 .right { width: 16px; height: 25px; background: rgba(253,203,110,0.4); transform: rotateY(90deg) translateZ(22px); }
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   DECORATIVE: WIREFRAME MOLECULE
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+#molecule {
+  position: absolute;
+  left: 50%; bottom: 22%;
+  transform-style: preserve-3d;
+  animation: mol-spin 12s linear infinite;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 1s 0.8s;
+}
+body.scene-ready #molecule { opacity: 1; }
+
+@keyframes mol-spin { to { transform: rotateY(360deg); } }
+
+.mol-core {
+  width: 16px; height: 16px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, #ff9a9e, #fecfef);
+  box-shadow: 0 0 20px rgba(255,154,158,0.8);
+  position: absolute; left: -8px; top: -8px;
+}
+.mol-orbit { position: absolute; transform-style: preserve-3d; }
+.mol-electron {
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: var(--cyan);
+  box-shadow: 0 0 10px var(--cyan);
+  position: absolute;
+}
+.mol-electron.e2 { background: var(--pink); box-shadow: 0 0 10px var(--pink); }
+.mol-electron.e3 { background: var(--violet); box-shadow: 0 0 10px var(--violet); }
+
+/* Orbit ring visual */
+.mol-ring {
+  position: absolute;
+  width: 60px; height: 60px;
+  left: -30px; top: -30px;
+  border: 1px solid rgba(0,0,0,0.1);
+  border-radius: 50%;
+}
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   DECORATIVE: NOTIFICATION ORB
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+#notif-orb {
+  position: absolute;
+  right: 22%; top: 18%;
+  width: 32px; height: 32px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, #fff, #a1c4fd 40%, #c2e9fb 70%, #fff 100%);
+  box-shadow: 0 0 30px rgba(161,196,253,0.6), inset -4px -4px 10px rgba(0,0,0,0.1), inset 2px 2px 4px rgba(255,255,255,1);
+  animation: orb-float 5s ease-in-out infinite, orb-pulse 2.5s ease-in-out infinite;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 1s 1s;
+}
+body.scene-ready #notif-orb { opacity: 1; }
+
+@keyframes orb-float {
+  0%, 100% { transform: translateY(0) translateZ(50px); }
+  50% { transform: translateY(-20px) translateZ(50px); }
+}
+@keyframes orb-pulse {
+  0%, 100% { box-shadow: 0 0 20px rgba(161,196,253,0.4), inset -4px -4px 8px rgba(0,0,0,0.1), inset 2px 2px 4px rgba(255,255,255,1); }
+  50% { box-shadow: 0 0 40px rgba(161,196,253,0.8), inset -4px -4px 8px rgba(0,0,0,0.1), inset 2px 2px 4px rgba(255,255,255,1); }
+}
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   FLOATING CONFETTI PARTICLES
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+.particle {
+  position: absolute;
+  border-radius: 50%;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 1s 1.2s;
+}
+body.scene-ready .particle { opacity: 1; }
+
+@keyframes particle-rise {
+  0% { transform: translateY(0) translateX(0); opacity: 0; }
+  10% { opacity: var(--p-alpha); }
+  90% { opacity: var(--p-alpha); }
+  100% { transform: translateY(calc(-100vh)) translateX(calc(var(--p-drift))); opacity: 0; }
+}
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   CARD LABELS
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+.card-label {
+  position: absolute;
+  bottom: -28px; left: 50%;
+  transform: translateX(-50%);
+  font-family: 'Syne', sans-serif;
+  font-size: 11px; font-weight: 800;
+  letter-spacing: 2px;
+  color: #1a1a2e;
+  white-space: nowrap;
+  pointer-events: none;
+  z-index: 3;
+  text-shadow: 0 2px 10px rgba(255,255,255,1);
+}
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   LOADING STATE
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+#loading-screen {
+  position: fixed; inset: 0; z-index: 99999;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  background: var(--bg-deep);
+  transition: opacity 0.6s;
+}
+#loading-screen.fade { opacity: 0; pointer-events: none; }
+.loading-logo {
+  font-family: 'Syne', sans-serif;
+  font-size: 32px; font-weight: 800;
+  background: linear-gradient(135deg, var(--pink), var(--violet));
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  margin-bottom: 24px;
+}
+.loading-bar-outer {
+  width: 240px; height: 4px;
+  background: rgba(0,0,0,0.05);
+  border-radius: 2px; overflow: hidden;
+}
+.loading-bar-inner {
+  height: 100%; width: 0%;
+  background: linear-gradient(90deg, var(--cyan), var(--pink));
+  border-radius: 2px;
+  animation: loading-fill 2s cubic-bezier(0.4,0,0.2,1) forwards;
+}
+@keyframes loading-fill {
+  0% { width: 0%; }
+  50% { width: 70%; }
+  100% { width: 100%; }
+}
+.loading-sub {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px; letter-spacing: 2px;
+  color: #555;
+  margin-top: 18px;
+}
+</style>
+</head>
+<body>
+
+<!-- Loading Screen -->
+<div id="loading-screen">
+  <div class="loading-logo">CogAIt</div>
+  <div class="loading-bar-outer"><div class="loading-bar-inner"></div></div>
+  <div class="loading-sub">SPATIAL AR ENGAGED</div>
+</div>
+
+<!-- Film Grain -->
+<div class="grain">
+  <svg xmlns="http://www.w3.org/2000/svg">
+    <filter id="grain-filter">
+      <feTurbulence type="fractalNoise" baseFrequency="0.65" numOctaves="3" stitchTiles="stitch"/>
+    </filter>
+    <rect width="100%" height="100%" filter="url(#grain-filter)"/>
+  </svg>
+</div>
+
+<!-- Ambient Background -->
+<div class="ambient-bg"></div>
+
+<!-- Custom Cursor -->
+<div id="cursor-ring"></div>
+<div id="cursor-dot"></div>
+
+<!-- Camera & World -->
+<div id="camera">
+  <div id="world">
+
+    <!-- Ground Plane -->
+    <div id="ground">
+      <div class="ground-glow g1"></div>
+      <div class="ground-glow g2"></div>
+      <div class="ground-glow g3"></div>
+      <div class="ground-glow g4"></div>
+    </div>
+
+    <!-- Card 1: Dashboard -->
+    <div class="ar-card card-dashboard" id="card-1" data-route="/student/dashboard">
+      <iframe title="Dashboard"></iframe>
+      <span class="card-label">DASHBOARD</span>
+    </div>
+
+    <!-- Card 2: Assignments -->
+    <div class="ar-card card-assignments" id="card-2" data-route="/lecturer/assignments">
+      <iframe title="Assignments"></iframe>
+      <span class="card-label">ASSIGNMENTS</span>
+    </div>
+
+    <!-- Card 3: Analytics -->
+    <div class="ar-card card-analytics" id="card-3" data-route="/student/analytics">
+      <iframe title="Analytics"></iframe>
+      <span class="card-label">ANALYTICS</span>
+    </div>
+
+    <!-- Card 4: CIS Score -->
+    <div class="ar-card card-cis" id="card-4" data-route="/lecturer/dashboard?section=home">
+      <iframe title="CIS Score"></iframe>
+      <span class="card-label">CIS SCORE</span>
+    </div>
+
+    <!-- Decorative: Cuboid Stack -->
+    <div id="cuboid-stack">
+      <div class="cuboid cub1">
+        <div class="face top"></div>
+        <div class="face front"></div>
+        <div class="face right"></div>
+      </div>
+      <div class="cuboid cub2">
+        <div class="face top"></div>
+        <div class="face front"></div>
+        <div class="face right"></div>
+      </div>
+      <div class="cuboid cub3">
+        <div class="face top"></div>
+        <div class="face front"></div>
+        <div class="face right"></div>
+      </div>
+    </div>
+
+    <!-- Decorative: Wireframe Molecule -->
+    <div id="molecule">
+      <div class="mol-ring"></div>
+      <div class="mol-ring" style="transform: rotateX(60deg)"></div>
+      <div class="mol-ring" style="transform: rotateY(60deg)"></div>
+      <div class="mol-core"></div>
+      <div class="mol-electron" style="top:-30px; left:-3px; animation: mol-e1 4s linear infinite;"></div>
+      <div class="mol-electron e2" style="top:24px; left:24px; animation: mol-e2 5s linear infinite;"></div>
+      <div class="mol-electron e3" style="top:24px; left:-27px; animation: mol-e3 6s linear infinite;"></div>
+    </div>
+
+    <!-- Decorative: Notification Orb -->
+    <div id="notif-orb"></div>
+
+  </div>
+</div>
+
+<!-- Back Button -->
+<button id="back-btn">← SPATIAL VIEW</button>
+
+<style>
+/* Molecule electron orbits */
+@keyframes mol-e1 {
+  0%   { transform: rotate(0deg) translateX(30px) rotate(0deg); }
+  100% { transform: rotate(360deg) translateX(30px) rotate(-360deg); }
+}
+@keyframes mol-e2 {
+  0%   { transform: rotateX(60deg) rotate(0deg) translateX(30px) rotate(0deg); }
+  100% { transform: rotateX(60deg) rotate(360deg) translateX(30px) rotate(-360deg); }
+}
+@keyframes mol-e3 {
+  0%   { transform: rotateY(60deg) rotate(0deg) translateX(30px) rotate(0deg); }
+  100% { transform: rotateY(60deg) rotate(360deg) translateX(30px) rotate(-360deg); }
+}
+</style>
+
+<script>
+(function() {
+  'use strict';
+
+  /* ━━━━━ CONFIG ━━━━━ */
+  const BASE_URL = window.location.origin;
+  const PARALLAX_MAX = 6;
+  const PARALLAX_LERP = 0.04;
+
+  const CARDS = [
+    {
+      id: 'card-1', route: '/student/dashboard',
+      w: 300, h: 400,
+      x: -120, y: -40,
+      rx: 6, ry: -14, z: 90,
+      floatY: 16, floatDur: 7000, floatDelay: 0,
+    },
+    {
+      id: 'card-2', route: '/lecturer/assignments',
+      w: 220, h: 340,
+      x: -340, y: 0,
+      rx: -5, ry: 18, z: 45,
+      floatY: 12, floatDur: 5500, floatDelay: -1500,
+    },
+    {
+      id: 'card-3', route: '/student/analytics',
+      w: 260, h: 210,
+      x: 200, y: 40,
+      rx: 9, ry: -22, z: 15,
+      floatY: 10, floatDur: 9000, floatDelay: -3000,
+    },
+    {
+      id: 'card-4', route: '/lecturer/dashboard?section=home',
+      w: 180, h: 200,
+      x: 380, y: -30,
+      rx: 4, ry: -18, z: 130,
+      floatY: 18, floatDur: 4500, floatDelay: -500,
+    },
+  ];
+
+  /* ━━━━━ ELEMENTS ━━━━━ */
+  const world    = document.getElementById('world');
+  const backBtn  = document.getElementById('back-btn');
+  const cRing    = document.getElementById('cursor-ring');
+  const cDot     = document.getElementById('cursor-dot');
+  const loader   = document.getElementById('loading-screen');
+
+  /* ━━━━━ STATE ━━━━━ */
+  let activeCard  = null;
+  let transitioning = false;
+  let mouseX = window.innerWidth / 2;
+  let mouseY = window.innerHeight / 2;
+  let ringX = mouseX, ringY = mouseY;
+  let currentRX = 12, currentRY = -8;
+  let targetRX  = 12, targetRY  = -8;
+  const startTime = Date.now();
+
+  /* ━━━━━ PARTICLES ━━━━━ */
+  function createParticles() {
+    const worldContainer = document.getElementById('world');
+    const colors = ['#00d4ff', '#ff1493', '#8a2be2', '#00fa9a', '#ff8c00'];
+    
+    for (let i = 0; i < 24; i++) {
+      const p = document.createElement('div');
+      p.className = 'particle';
+      const size = 1.5 + Math.random() * 3;
+      const x = 5 + Math.random() * 90;
+      const dur = 6 + Math.random() * 12;
+      const delay = Math.random() * dur;
+      const color = colors[Math.floor(Math.random() * colors.length)];
+      const alpha = 0.3 + Math.random() * 0.4;
+      const drift = (Math.random() - 0.5) * 80;
+      p.style.cssText = `
+        width: ${size}px; height: ${size}px;
+        background: ${color};
+        box-shadow: 0 0 ${size * 5}px ${color};
+        left: ${x}%;
+        bottom: 10%;
+        --p-alpha: ${alpha};
+        --p-drift: ${drift}px;
+        animation: particle-rise ${dur}s linear ${delay}s infinite;
+      `;
+      worldContainer.appendChild(p);
+    }
+  }
+
+  /* ━━━━━ ACCURATE IFRAME SCALING (SOLVES LAYOUT GLITCH) ━━━━━ */
+  function setupIframes() {
+    CARDS.forEach(c => {
+      // Determines optimal scale to completely fill the 3D card 
+      // without resizing the actual 100vw iframe DOM width/height
+      c.scale = Math.max(c.w / window.innerWidth, c.h / window.innerHeight);
+      
+      const el = document.getElementById(c.id);
+      const iframe = el.querySelector('iframe');
+
+      iframe.style.width  = '100vw';
+      iframe.style.height = '100vh';
+      iframe.style.transform = `scale(${c.scale})`;
+      iframe.src = BASE_URL + c.route;
+    });
+  }
+
+  /* Handle dynamic resizes for dormant cards to prevent clipping */
+  window.addEventListener('resize', () => {
+    if (!transitioning && !activeCard) {
+      CARDS.forEach(c => {
+        c.scale = Math.max(c.w / window.innerWidth, c.h / window.innerHeight);
+        const el = document.getElementById(c.id);
+        const iframe = el.querySelector('iframe');
+        iframe.style.transform = `scale(${c.scale})`;
+      });
+    }
+  });
+
+  /* ━━━━━ CARD POSITIONING ━━━━━ */
+  function getCardTransform(c, floatOffset) {
+    const fo = floatOffset || 0;
+    return `translate(-50%, -50%) translate(${c.x}px, calc(${c.y}px + ${fo}px)) rotateY(${c.ry}deg) rotateX(${c.rx}deg) translateZ(${c.z}px)`;
+  }
+  function getCardHiddenTransform(c) {
+    return `translate(-50%, -50%) translate(${c.x}px, ${c.y}px) rotateY(${c.ry}deg) rotateX(${c.rx}deg) translateZ(-120px)`;
+  }
+
+  function positionCards() {
+    CARDS.forEach(c => {
+      const el = document.getElementById(c.id);
+      el.style.left = '50%';
+      el.style.top  = '50%';
+      el.style.transform = getCardHiddenTransform(c);
+      el.style.width = c.w + 'px';
+      el.style.height = c.h + 'px';
+    });
+  }
+
+  /* ━━━━━ ENTRY ANIMATION ━━━━━ */
+  function animateEntry() {
+    document.body.classList.add('scene-ready');
+    CARDS.forEach((c, i) => {
+      const el = document.getElementById(c.id);
+      setTimeout(() => {
+        el.style.opacity = '1';
+        el.style.transform = getCardTransform(c);
+      }, i * 80);
+    });
+  }
+
+  /* ━━━━━ FLOAT LOOP ━━━━━ */
+  function floatLoop() {
+    if (activeCard || transitioning) {
+      requestAnimationFrame(floatLoop);
+      return;
+    }
+    const now = Date.now();
+    CARDS.forEach(c => {
+      const el = document.getElementById(c.id);
+      if (el.classList.contains('expanding') || el.classList.contains('expanded')) return;
+      const progress = ((now - startTime + c.floatDelay) % c.floatDur) / c.floatDur;
+      const floatOffset = Math.sin(progress * Math.PI * 2) * (-c.floatY / 2);
+      el.style.transform = getCardTransform(c, floatOffset);
+    });
+    requestAnimationFrame(floatLoop);
+  }
+
+  /* ━━━━━ PARALLAX LOOP ━━━━━ */
+  function parallaxLoop() {
+    if (activeCard) {
+      requestAnimationFrame(parallaxLoop);
+      return;
+    }
+    const normX = (mouseX / window.innerWidth) * 2 - 1;
+    const normY = (mouseY / window.innerHeight) * 2 - 1;
+    targetRX = 12 + normY * -PARALLAX_MAX;
+    targetRY = -8 + normX * PARALLAX_MAX;
+
+    currentRX += (targetRX - currentRX) * PARALLAX_LERP;
+    currentRY += (targetRY - currentRY) * PARALLAX_LERP;
+
+    world.style.transform = `rotateX(${currentRX}deg) rotateY(${currentRY}deg)`;
+    requestAnimationFrame(parallaxLoop);
+  }
+
+  /* ━━━━━ CURSOR LOOP ━━━━━ */
+  function cursorLoop() {
+    ringX += (mouseX - ringX) * 0.12;
+    ringY += (mouseY - ringY) * 0.12;
+    cRing.style.left = ringX + 'px';
+    cRing.style.top  = ringY + 'px';
+    cDot.style.left  = mouseX + 'px';
+    cDot.style.top   = mouseY + 'px';
+    requestAnimationFrame(cursorLoop);
+  }
+
+  document.addEventListener('mousemove', e => {
+    mouseX = e.clientX;
+    mouseY = e.clientY;
+  });
+
+  /* ━━━━━ HOVER EFFECTS ━━━━━ */
+  CARDS.forEach(c => {
+    const el = document.getElementById(c.id);
+    el.addEventListener('mouseenter', () => {
+      if (activeCard || transitioning) return;
+      const boosted = getCardTransform(c).replace(
+        `translateZ(${c.z}px)`,
+        `translateZ(${c.z + 12}px)`
+      );
+      el.style.transform = boosted;
+    });
+    el.addEventListener('mouseleave', () => {
+      if (activeCard || transitioning) return;
+      el.style.transform = getCardTransform(c);
+    });
+  });
+
+  /* ━━━━━ DOUBLE-CLICK: EXPAND ━━━━━ */
+  CARDS.forEach(c => {
+    const el = document.getElementById(c.id);
+    el.addEventListener('dblclick', e => {
+      e.stopPropagation();
+      if (activeCard || transitioning) return;
+      expandCard(c);
+    });
+  });
+
+  function setEnvironmentOpacity(opacity) {
+    document.getElementById('ground').style.opacity = opacity;
+    document.getElementById('molecule').style.opacity = opacity;
+    document.getElementById('notif-orb').style.opacity = opacity;
+    document.getElementById('cuboid-stack').style.opacity = opacity;
+    document.querySelectorAll('.particle').forEach(p => p.style.opacity = opacity);
+  }
+
+  function expandCard(c) {
+    transitioning = true;
+    activeCard = c;
+    const el = document.getElementById(c.id);
+    const iframe = el.querySelector('iframe');
+
+    /* Phase 1: Dim Siblings */
+    el.style.transform = getCardTransform(c).replace(')', ' scale(1.05)');
+    CARDS.forEach(other => {
+      if (other.id !== c.id) {
+        document.getElementById(other.id).classList.add('dimmed');
+      }
+    });
+
+    /* Phase 2: Smooth 3D Extrapolation */
+    setTimeout(() => {
+      el.classList.add('expanding');
+      
+      el.style.width  = '100%';
+      el.style.height = '100%';
+      el.style.transform = 'translate(-50%, -50%) rotateX(0deg) rotateY(0deg) translateZ(0px)';
+
+      /* Iframe scales flawlessly without DOM layout reflows */
+      iframe.style.transition = 'transform 400ms cubic-bezier(0.34,1.2,0.64,1)';
+      iframe.style.transform = 'scale(1)';
+
+      /* Nullify World Parallax Rotation smoothly */
+      world.style.transition = 'transform 400ms cubic-bezier(0.34,1.2,0.64,1)';
+      world.style.transform = 'rotateX(0deg) rotateY(0deg)';
+
+      setEnvironmentOpacity('0');
+      document.body.classList.add('expanded');
+    }, 150);
+
+    /* Phase 3: Resolution & Finalize Z-Indexes */
+    setTimeout(() => {
+      CARDS.forEach(other => {
+        if (other.id !== c.id) {
+          document.getElementById(other.id).classList.add('hidden-card');
+        }
+      });
+      el.classList.remove('expanding');
+      el.classList.add('expanded');
+      
+      iframe.style.transition = '';
+      world.style.transition = '';
+      
+      backBtn.classList.add('visible');
+      transitioning = false;
+    }, 550);
+  }
+
+  /* ━━━━━ COLLAPSE ━━━━━ */
+  function collapseCard() {
+    if (!activeCard || transitioning) return;
+    transitioning = true;
+    const c = activeCard;
+    const el = document.getElementById(c.id);
+    const iframe = el.querySelector('iframe');
+
+    backBtn.classList.remove('visible');
+    document.body.classList.remove('expanded');
+
+    el.classList.remove('expanded');
+    el.classList.add('expanding');
+
+    setEnvironmentOpacity('1');
+
+    /* Spin World Back to Natural Parallax Target */
+    world.style.transition = 'transform 500ms cubic-bezier(0.32,0,0.67,0)';
+    targetRX = 12 + ((mouseY / window.innerHeight) * 2 - 1) * -PARALLAX_MAX;
+    targetRY = -8 + ((mouseX / window.innerWidth) * 2 - 1) * PARALLAX_MAX;
+    world.style.transform = `rotateX(${targetRX}deg) rotateY(${targetRY}deg)`;
+    currentRX = targetRX; currentRY = targetRY;
+
+    /* Push card back to space */
+    el.style.width  = c.w + 'px';
+    el.style.height = c.h + 'px';
+    el.style.transform = getCardTransform(c);
+
+    /* Repack iframe smoothly via scale, NO DOM resizing */
+    iframe.style.transition = 'transform 500ms cubic-bezier(0.32,0,0.67,0)';
+    iframe.style.transform = `scale(${c.scale})`;
+
+    CARDS.forEach(other => {
+      if (other.id !== c.id) {
+        const otherEl = document.getElementById(other.id);
+        otherEl.classList.remove('hidden-card');
+        setTimeout(() => otherEl.classList.remove('dimmed'), 50);
+      }
+    });
+
+    setTimeout(() => {
+      el.classList.remove('expanding');
+      iframe.style.transition = '';
+      world.style.transition = '';
+      activeCard = null;
+      transitioning = false;
+    }, 500);
+  }
+
+  backBtn.addEventListener('click', collapseCard);
+
+  document.addEventListener('dblclick', e => {
+    if (!activeCard || transitioning) return;
+    const el = document.getElementById(activeCard.id);
+    if (!el.contains(e.target) && e.target !== backBtn) {
+      collapseCard();
+    }
+  });
+
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape' && activeCard && !transitioning) {
+      collapseCard();
+    }
+  });
+
+  /* ━━━━━ INITIALIZATION ━━━━━ */
+  function init() {
+    createParticles();
+    setupIframes();
+    positionCards();
+
+    requestAnimationFrame(cursorLoop);
+    requestAnimationFrame(parallaxLoop);
+    requestAnimationFrame(floatLoop);
+
+    setTimeout(() => {
+      loader.classList.add('fade');
+      setTimeout(() => {
+        loader.style.display = 'none';
+        animateEntry();
+      }, 600);
+    }, 2000);
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init);
+  } else {
+    init();
+  }
+})();
+</script>
+</body>
+</html>

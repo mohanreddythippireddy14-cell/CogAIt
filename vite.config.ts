@@ -40,4 +40,23 @@ window.addEventListener('message', async (message) => {
       "@": path.resolve(__dirname, "./src"),
     },
   },
+  server: {
+    proxy: {
+      "/agent2": {
+        target: "http://localhost:8082",
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/agent2/, ""),
+      },
+      "/agent7": {
+        target: "http://localhost:8087",
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/agent7/, ""),
+      },
+      "/agent-negotiation": {
+        target: "http://localhost:8089",
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/agent-negotiation/, ""),
+      },
+    },
+  },
 }));

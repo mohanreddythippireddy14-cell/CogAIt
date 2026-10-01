@@ -114,7 +114,7 @@ export function CreateAIAssignment() {
       job.inputType === "pdf" &&
       !job.isPublished &&
       (job.status === "review_ready" || job.status === "completed") &&
-      job.assignmentId !== dismissedPublishAssignmentId,
+      String(job.assignmentId) !== dismissedPublishAssignmentId,
   );
 
   useEffect(() => {
@@ -433,11 +433,11 @@ export function CreateAIAssignment() {
       </div>
 
       {readyPublishJob && (
-        <div className="mb-4 rounded-lg border border-green-200 bg-green-50 p-3 flex items-start justify-between gap-3">
+        <div className="mb-4 rounded-lg border border-green-200 bg-[rgba(255,255,255,0.04)] p-3 flex items-start justify-between gap-3">
           <button
             type="button"
             onClick={() => {
-              navigate(`/lecturer/assignment/${readyPublishJob.assignmentId}/edit`);
+              navigate(`/lecturer/assignment/ai-create?assignmentId=${readyPublishJob.assignmentId}`);
             }}
             className="text-green-800 font-medium hover:underline text-left"
           >
@@ -446,9 +446,9 @@ export function CreateAIAssignment() {
           <button
             type="button"
             aria-label="Dismiss publish prompt"
-            className="text-green-700 hover:text-green-900"
+            className="text-green-700 hover:text-white"
             onClick={() => {
-              const assignmentKey = readyPublishJob.assignmentId as string;
+              const assignmentKey = String(readyPublishJob.assignmentId);
               setDismissedPublishAssignmentId(assignmentKey);
               window.localStorage.setItem(DISMISSED_PUBLISH_BANNER_KEY, assignmentKey);
             }}
@@ -459,7 +459,7 @@ export function CreateAIAssignment() {
       )}
 
       {step === "input" && (
-        <div className="ui-card p-6 space-y-5">
+        <div className="spatial-widget p-6 space-y-5">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <input
               className="auth-input-field"
@@ -505,7 +505,7 @@ export function CreateAIAssignment() {
                 key={mode}
                 onClick={() => setInputType(mode)}
                 className={`px-4 py-2 rounded-lg ${
-                  inputType === mode ? "bg-blue-500 text-white" : "bg-gray-100"
+                  inputType === mode ? "bg-blue-500 text-white" : "bg-[rgba(255,255,255,0.06)]"
                 }`}
               >
                 {mode === "text" ? "Paste Text" : "Upload PDF"}
@@ -517,7 +517,7 @@ export function CreateAIAssignment() {
             <textarea
               className="auth-input-field"
               rows={10}
-              placeholder="Paste assignment text here..."
+              placeholder="Give the prompt to generate the ai powered assignment"
               value={sourceText}
               onChange={(e) => setSourceText(e.target.value)}
             />
@@ -528,7 +528,7 @@ export function CreateAIAssignment() {
                 accept="application/pdf"
                 onChange={(e) => setPdfFile(e.target.files?.[0] ?? null)}
               />
-              <p className="text-xs text-gray-500">AI will extract questions from your PDF.</p>
+              <p className="text-xs text-white/50">AI will extract questions from your PDF.</p>
             </div>
           )}
 
@@ -561,9 +561,9 @@ export function CreateAIAssignment() {
       )}
 
       {step === "processing" && (
-        <div className="ui-card p-6">
+        <div className="spatial-widget p-6">
           <h2 className="text-lg font-medium mb-2">Processing Assignment</h2>
-          <p className="text-sm text-gray-600 mb-4">
+          <p className="text-sm text-white/60 mb-4">
             Status: {draftStatus?.status ?? "processing"}
           </p>
           {draftStatus === null && (
@@ -592,23 +592,23 @@ export function CreateAIAssignment() {
               </p>
               <button
                 className="ui-button ui-button-primary px-4 py-2"
-                onClick={() => navigate(`/lecturer/assignment/${assignmentId}/edit`)}
+                onClick={() => navigate(`/lecturer/assignment/ai-create?assignmentId=${assignmentId}`)}
               >
                 Click Here to review and publish
               </button>
             </div>
           ) : (
-            <p className="text-gray-700">AI is extracting, classifying, and generating draft answers.</p>
+            <p className="text-white/70">AI is extracting, classifying, and generating draft answers.</p>
           )}
         </div>
       )}
 
       {step === "review" && assignmentId && (
         <div className="space-y-4">
-          <div className="ui-card p-4 flex items-center justify-between">
+          <div className="spatial-widget p-4 flex items-center justify-between">
             <div>
               <p className="font-medium">Review Questions</p>
-              <p className="text-sm text-gray-600">
+              <p className="text-sm text-white/60">
                 Reviewed: {reviewedCount}/{reviewQuestions?.length ?? 0}
               </p>
             </div>
@@ -630,7 +630,7 @@ export function CreateAIAssignment() {
           </div>
 
           {editableQuestions.map((q) => (
-            <div key={q._id} className="ui-card p-4 space-y-3">
+            <div key={q._id} className="spatial-widget p-4 space-y-3">
               <div className="flex items-center justify-between">
                 <p className="font-medium">Question {q.questionNumber}</p>
                 <button
@@ -794,7 +794,7 @@ export function CreateAIAssignment() {
                 Mark reviewed
               </label>
 
-              <div className="flex items-center justify-between text-xs text-gray-500">
+              <div className="flex items-center justify-between text-xs text-white/50">
                 <span>
                   Confidence: {q.confidenceLevel ?? "low"} ({Math.round((q.confidenceScore ?? 0) * 100)}%)
                 </span>

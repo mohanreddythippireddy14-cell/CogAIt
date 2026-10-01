@@ -17,8 +17,14 @@ export function AppLogo({
   if (failed) {
     return (
       <div>
-        <h1 className="text-3xl md:text-4xl font-bold mb-2 text-[var(--color-primary)]">CogAIt</h1>
-        {showTagline && <p className="text-xl text-muted">Think-First AI Learning Platform</p>}
+        <h1 className="text-3xl md:text-4xl font-bold mb-2 text-[var(--color-primary-solid)]">
+          CogAIt
+        </h1>
+        {showTagline && (
+          <p className="text-base text-muted font-medium tracking-wide">
+            Think-First AI Learning Platform
+          </p>
+        )}
       </div>
     );
   }
@@ -31,7 +37,11 @@ export function AppLogo({
         className={`${dimensions} w-auto object-contain`}
         onError={() => setFailed(true)}
       />
-      {showTagline && <p className="text-xl text-muted mt-2">Think-First AI Learning Platform</p>}
+      {showTagline && (
+        <p className="text-base text-muted mt-2 font-medium tracking-wide">
+          Think-First AI Learning Platform
+        </p>
+      )}
     </div>
   );
 }

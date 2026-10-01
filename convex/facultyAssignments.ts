@@ -11,6 +11,11 @@ import { enqueueAiJob } from "./infrastructure/aiQueue";
 import { isFeatureEnabled } from "./infrastructure/featureFlags";
 import { validateStrictAiQuestions } from "./domain/strictJsonValidation";
 import {
+  normalizeAiQuestions,
+  parseAiQuestionResponse,
+  type NormalizedAiQuestion,
+} from "./domain/aiQuestionNormalization";
+import {
   buildContentBlocksFromText,
   blocksToLegacyText,
   computeBlockMetrics,
@@ -36,28 +41,18 @@ const DUPLICATE_WINDOW_MS = 60 * 1000;
 
 type McqOptionKey = (typeof MCQ_OPTION_KEYS)[number];
 
-type AiQuestion = {
-  question_text: string;
-  question_type: string;
-  subject: "Physics" | "Chemistry" | "Math";
-  topic: string;
-  difficulty_ai: "easy" | "medium" | "hard";
-  structured_representation: {
-    given_variables: string[];
-    target_variable: string;
-    equation_category: string;
-    assumptions: string[];
-  };
-  ai_answer: string;
-  confidence_level: "high" | "medium" | "low";
-  confidence_score: number;
-  segmentation_confidence: number;
-  mcq_options?: string[];
-  correct_option?: string;
-};
+type AiQuestion = NormalizedAiQuestion;
 
 const SEGMENTATION_PROMPT = `You are a faculty assignment processor.
-Given assignment text, segment it into questions and classify each question.
+The input may be either:
+1. Existing assignment content that must be segmented into questions, or
+2. A natural-language instruction asking you to CREATE an assignment.
+
+If the input is an instruction, generate the requested questions. Infer a sensible question count
+when none is specified (default 10), subject, topics, difficulty mix, and answers. Never return an
+empty array merely because the input contains instructions instead of existing questions.
+
+If the input contains existing questions, preserve and classify them rather than inventing replacements.
 Return STRICT JSON array (no markdown) using this schema:
 [
   {
@@ -85,14 +80,6 @@ Rules:
 - For non-mcq, omit mcq_options and correct_option.
 - Preserve equation tokens in question_text exactly as provided (e.g. [EQ:\\int_0^1 x^2 dx]).
 - Keep maximum 50 questions.`;
-
-function normalizeJsonResponse(text: string): string {
-  const trimmed = text.trim();
-  if (trimmed.startsWith("```")) {
-    return trimmed.replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/, "");
-  }
-  return trimmed;
-}
 
 function bytesToBase64(bytes: Uint8Array): string {
   const chunkSize = 0x8000;
@@ -303,7 +290,7 @@ async function callGeminiWithFallback(
   mimeType?: string,
   dataBase64?: string,
 ): Promise<string> {
-  const candidateModels = ["gemini-2.5-flash", "gemini-2.0-flash", "gemini-flash-latest"];
+  const candidateModels = [(process.env.GEMINI_MODEL || "gemini-3.5-flash")];
   if (mimeType && dataBase64) {
     const result = await generateMultimodalWithFallback({
       promptParts: [
@@ -377,10 +364,16 @@ async function segmentAssignmentTextWithFallback(
     const preparedChunk = serializeBlocksForSegmentation(chunk);
     const segmentationPrompt = `${SEGMENTATION_PROMPT}\n\nChunk ${i + 1} of ${chunks.length}:\n${preparedChunk}`;
     const raw = await callGeminiWithFallback(segmentationPrompt);
-    const parsedRaw = JSON.parse(normalizeJsonResponse(raw));
-    const parsed = parsedRaw as AiQuestion[];
-    if (!Array.isArray(parsed)) {
-      continue;
+    let parsed = normalizeAiQuestions(parseAiQuestionResponse(raw));
+    if (parsed.length === 0) {
+      const retryPrompt = `${SEGMENTATION_PROMPT}
+
+Your previous response contained no usable questions. Create a non-empty assignment from this input.
+Use "question_text" for every question and return only the JSON array.
+
+Input:
+${preparedChunk}`;
+      parsed = normalizeAiQuestions(parseAiQuestionResponse(await callGeminiWithFallback(retryPrompt)));
     }
     for (const q of parsed) {
       const key = normalizeQuestionFingerprint(q.question_text ?? "");

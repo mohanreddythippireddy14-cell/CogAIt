@@ -2,7 +2,7 @@ import { action, query } from "../_generated/server";
 import { v } from "convex/values";
 import { internal } from "../_generated/api";
 import type { Id } from "../_generated/dataModel.js";
-import { requireAuthWithProfile } from "../lib/authGuards";
+import { requireAuthFromAction } from "../lib/authGuards";
 import { METRIC_CONTRACTS } from "../constants";
 
 type AssignmentLookup = {
@@ -128,7 +128,7 @@ export const getAssignmentDashboard = action({
     metricVersion: v.string(),
   }),
   handler: async (ctx, args): Promise<AssignmentDashboardResult> => {
-    const { userId, profile } = await requireAuthWithProfile(ctx);
+    const { userId, profile } = await requireAuthFromAction(ctx);
     assertFaculty(profile.role);
 
     const assignment: AssignmentLookup | null = await ctx.runQuery((internal as any)["dashboard/assignmentDashboard"]._getAssignment, {

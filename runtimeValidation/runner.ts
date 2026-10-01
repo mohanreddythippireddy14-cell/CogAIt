@@ -7,6 +7,7 @@ import { runPhase8Validation } from "./phase8Validation.js";
 import { runTenantIsolationValidation } from "./tenantIsolationValidation.js";
 import { runAuthValidation } from "./authValidation.js";
 import { runRollbackValidation } from "./rollbackValidation.js";
+import { runAiQuestionValidation } from "./aiQuestionValidation.js";
 
 async function main() {
   try {
@@ -19,6 +20,7 @@ async function main() {
     await runTenantIsolationValidation();
     await runAuthValidation();
     await runRollbackValidation();
+    await runAiQuestionValidation();
     process.exit(0);
   } catch (error) {
     console.error(error instanceof Error ? error.message : String(error));

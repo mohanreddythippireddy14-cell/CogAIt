@@ -1,5 +1,6 @@
 // Tools for Agent 6 (Cohort Analyst)
 import { convex } from '../memory/convex_client.js';
+import { saveLecturerCohortSummary } from '../memory/long_term_memory.js';
 
 export const bigqueryCohortQuery = async (batchId: string): Promise<any[]> => {
   console.log(`[BigQueryCohort] Querying cohort batch data for batch ${batchId}`);
@@ -16,6 +17,7 @@ export const riskDetector = (data: any): string[] => {
   return []; // No risky students simulated
 };
 
-export const convexWriteCohort = async (batchId: string, cohortSummary: any): Promise<void> => {
-  console.log(`[ConvexWriteCohort] Wrote cohort summary for batch ${batchId} to lecturer dashboard`);
+export const convexWriteCohort = async (batchId: string, cohortSummary: any, lecturerId: string = "default_lecturer"): Promise<void> => {
+  await saveLecturerCohortSummary(lecturerId, batchId, cohortSummary);
+  console.log(`[ConvexWriteCohort] Wrote cohort summary for batch ${batchId} to lecturer dashboard for lecturer ${lecturerId}`);
 };

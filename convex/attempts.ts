@@ -4,7 +4,6 @@ import { api, internal } from "./_generated/api";
 import { Id } from "./_generated/dataModel";
 import { requireAuthWithProfile } from "./lib/authGuards";
 import { requireSameOrganization } from "./infrastructure/organizationGuard";
-import { isGradedSubmission } from "./application/attemptService";
 import { computeCisPerQuestion, computeOverallCis } from "./domain/scoring";
 
 const attemptValidator = v.object({
@@ -128,6 +127,79 @@ async function getOrCreateAssignmentProgress(
   return created;
 }
 
+async function submitAllAssignmentAttempts(
+  ctx: MutationCtx,
+  organizationId: Id<"organizations">,
+  studentId: Id<"users">,
+  assignmentId: Id<"assignments">,
+  submittedAt: number,
+) {
+  const questions = await ctx.db
+    .query("questions")
+    .withIndex("by_assignment", (q) => q.eq("assignmentId", assignmentId))
+    .collect();
+  const attempts = await ctx.db
+    .query("attempts")
+    .withIndex("by_org_assignment_student", (q) =>
+      q.eq("organizationId", organizationId).eq("assignmentId", assignmentId).eq("studentId", studentId),
+    )
+    .collect();
+  const attemptByQuestionId = new Map(attempts.map((attempt) => [attempt.questionId.toString(), attempt]));
+  let submittedCount = 0;
+
+  await Promise.all(
+    questions.map(async (question) => {
+      const existing = attemptByQuestionId.get(question._id.toString());
+      if (existing) {
+        if (existing.submittedAt !== undefined) {
+          submittedCount += 1;
+          return;
+        }
+        const hasAnswer = (existing.studentAnswer ?? "").trim().length > 0;
+        const normalizeAnswer = (value: string) => value.trim().toLowerCase().replace(/\s+/g, " ");
+        const questionAny = question as typeof question & { correctOption?: "A" | "B" | "C" | "D" };
+        const normalizedAnswer = (existing.studentAnswer ?? "").trim().toUpperCase();
+        const isCorrect = !hasAnswer
+          ? false
+          : questionAny.correctOption
+            ? normalizedAnswer === questionAny.correctOption
+            : question.correctAnswer && question.correctAnswer.trim().length > 0
+              ? normalizeAnswer(existing.studentAnswer ?? "") === normalizeAnswer(question.correctAnswer)
+              : existing.isCorrect;
+        await ctx.db.patch(existing._id, {
+          submittedAt,
+          questionStatus: hasAnswer ? "answered" : "skipped",
+          markedForReview: false,
+          isCorrect,
+        });
+        submittedCount += 1;
+        return;
+      }
+
+      await ctx.db.insert("attempts", {
+        organizationId,
+        studentId,
+        assignmentId,
+        questionId: question._id,
+        startedAt: submittedAt,
+        submittedAt,
+        studentAnswer: "",
+        questionStatus: "skipped",
+        markedForReview: false,
+        isCorrect: false,
+        totalHelpRequests: 0,
+        helpLevelsUsed: [],
+        retryCount: 0,
+        copyPasteDetected: false,
+        answerBeforeReasoning: false,
+      });
+      submittedCount += 1;
+    }),
+  );
+
+  return submittedCount;
+}
+
 async function maybeCalculateFinalScores(
   ctx: MutationCtx,
   studentId: Id<"users">,
@@ -149,9 +221,7 @@ async function maybeCalculateFinalScores(
     )
     .collect();
 
-  const submittedAttempts = attempts.filter(
-    (attempt) => isGradedSubmission(attempt),
-  );
+  const submittedAttempts = attempts.filter((attempt) => attempt.submittedAt !== undefined);
   const assignmentCompleted =
     assignment.totalQuestions > 0 &&
     submittedAttempts.length >= assignment.totalQuestions;
@@ -446,18 +516,12 @@ export const autoSubmitAssignment = mutation({
       .collect();
 
     const now = Date.now();
-    const toSubmit = attempts.filter(
-      (attempt) =>
-        attempt.submittedAt === undefined &&
-        isGradedSubmission({ submittedAt: now, studentAnswer: attempt.studentAnswer }),
-    );
-    await Promise.all(
-      toSubmit.map((attempt) =>
-        ctx.db.patch(attempt._id, {
-          submittedAt: now,
-          questionStatus: (attempt.studentAnswer ?? "").trim().length > 0 ? "answered" : "skipped",
-        }),
-      ),
+    const submittedCount = await submitAllAssignmentAttempts(
+      ctx,
+      profile.organizationId,
+      userId,
+      args.assignmentId,
+      now,
     );
 
     const progress = await getOrCreateAssignmentProgress(
@@ -475,9 +539,15 @@ export const autoSubmitAssignment = mutation({
     });
 
     const finalIndependenceScore = await maybeCalculateFinalScores(ctx, userId, args.assignmentId);
+    const finalizedAttempts = await ctx.db
+      .query("attempts")
+      .withIndex("by_org_assignment_student", (q) =>
+        q.eq("organizationId", profile.organizationId).eq("assignmentId", args.assignmentId).eq("studentId", userId),
+      )
+      .collect();
 
     await Promise.all(
-      attempts.map((attempt) =>
+      finalizedAttempts.map((attempt) =>
         ctx.runMutation(
           internal.calculations.cognitiveScore.calculateAndPatchCognitiveScore,
           {
@@ -493,7 +563,7 @@ export const autoSubmitAssignment = mutation({
     await triggerRollupRecompute(ctx, args.assignmentId);
 
     return {
-      autoSubmittedCount: toSubmit.length,
+      autoSubmittedCount: submittedCount,
       finalIndependenceScore,
     };
   },
@@ -834,6 +904,7 @@ export const getResultsReport = query({
     completedQuestions: v.number(),
     totalHelpRequests: v.number(),
     overallCis: v.number(),
+    overallIndependenceScore: v.number(),
     overtimeSeconds: v.number(),
     perQuestion: v.array(
       v.object({
@@ -895,7 +966,7 @@ export const getResultsReport = query({
     const perQuestion = questions.map((question) => {
       const attempt = attemptByQuestionId.get(question._id.toString());
       const completed = Boolean(attempt?.submittedAt && (attempt.studentAnswer ?? "").trim().length > 0);
-      const cisScore = attempt
+      const cisScore = attempt && completed
         ? Math.round(
           computeCisPerQuestion({
             totalHelpRequests: attempt.totalHelpRequests,
@@ -927,6 +998,13 @@ export const getResultsReport = query({
     const completedQuestions = attempts.filter((a) => a.submittedAt && (a.studentAnswer ?? "").trim().length > 0).length;
     const totalHelpRequests = attempts.reduce((sum, attempt) => sum + attempt.totalHelpRequests, 0);
     const overallCis = computeOverallCis(attempts);
+    const submittedAttempts = attempts.filter((attempt) => attempt.submittedAt !== undefined);
+    const overallIndependenceScore = submittedAttempts.length > 0
+      ? Math.round(
+          submittedAttempts.reduce((sum, attempt) => sum + (attempt.independenceScore ?? 0), 0) /
+            submittedAttempts.length,
+        )
+      : 0;
 
     const topicAgg = new Map<string, {
       subject: "Physics" | "Chemistry" | "Math";
@@ -989,6 +1067,7 @@ export const getResultsReport = query({
       completedQuestions,
       totalHelpRequests,
       overallCis,
+      overallIndependenceScore,
       overtimeSeconds: progress?.submittedAt
         ? Math.max(0, Math.round((progress?.activeTimeMs ?? 0) / 1000 - assignment.timeLimitMinutes * 60))
         : 0,

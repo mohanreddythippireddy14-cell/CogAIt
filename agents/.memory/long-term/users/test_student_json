@@ -1,0 +1,34 @@
+{
+  "userId": "test_student",
+  "studyPreferences": {
+    "preferredStudyWindowStart": "17:00",
+    "preferredStudyWindowEnd": "22:00"
+  },
+  "sessionHistory": [
+    {
+      "assignmentId": "test_assignment",
+      "recordedAt": "2026-09-30T18:28:53.257Z",
+      "payload": {
+        "student_id": "test_student",
+        "assignment_id": "test_assignment",
+        "topic_performance": [
+          {
+            "topic_name": "Basic Addition",
+            "max_scaffold_depth": 1,
+            "classification": "weak"
+          }
+        ],
+        "weak_topics": [
+          "Basic Addition"
+        ],
+        "strong_topics": [],
+        "remediation_recommended": true,
+        "session_integrity_score": 1,
+        "time_available_for_remediation": true
+      }
+    }
+  ],
+  "cisHistory": [],
+  "vectorPatterns": [],
+  "lastUpdatedAt": "2026-09-30T18:28:53.257Z"
+}

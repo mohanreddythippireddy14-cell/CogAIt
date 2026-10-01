@@ -1,5 +1,4 @@
 import { useState, useEffect, useRef } from "react";
-import type { CSSProperties } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useAction, useConvex } from "convex/react";
 import { api } from "../../convex/_generated/api";
@@ -7,6 +6,7 @@ import { Id } from "../../convex/_generated/dataModel";
 import { LEVEL_NAMES } from "../../convex/constants";
 import { MathRenderer } from "./MathRenderer";
 import { ContentBlocksRenderer } from "./ContentBlocksRenderer";
+import { RemediationConsent } from "./RemediationConsent";
 import { toast } from "sonner";
 import { 
   ArrowLeft, 
@@ -74,14 +74,19 @@ export function QuestionView() {
   const storeAgentInteraction = useMutation(api.ai.storeInteraction);
   const updateHelpStats = useMutation(api.attempts.updateHelpStats);
   const convex = useConvex();
-  const AGENT_BASE_URL = import.meta.env.VITE_AGENT_URL || 'http://localhost';
+  const AGENT_BASE_URL = import.meta.env.VITE_AGENT_URL || "";
   const sendImageFeedback = useAction(api.ai.sendImageFeedback);
+  const sendChatMessageAction = useAction(api.ai.sendChatMessage);
   const recordViolation = useMutation(api.attempts.recordViolation);
   const updateHeartbeat = useMutation(api.attempts.updateHeartbeat);
   const autoSubmitAssignment = useMutation(api.attempts.autoSubmitAssignment);
   const updateLiveSnapshot = useMutation((api as any).sessions.updateLiveSnapshot);
   const resumeAssignmentTimer = useMutation(api.attempts.resumeAssignmentTimer);
   const pauseAssignmentTimer = useMutation(api.attempts.pauseAssignmentTimer);
+  const user = useQuery((api as any).users.loggedInUserWithProfile) as
+    | { userId: Id<"users">; profile: { role: "student" | "lecturer" | "organizationAdmin" } }
+    | null
+    | undefined;
   const studentAssignments = useQuery(api.assignments.getStudentAssignments);
   const assignmentMeta = studentAssignments?.find((item) => item._id === (assignmentId as Id<"assignments">));
   const assignmentProgress = useQuery(
@@ -128,9 +133,7 @@ export function QuestionView() {
   const cameraStreamRef = useRef<MediaStream | null>(null);
   const chatMessagesRef = useRef<HTMLDivElement>(null);
   const chatInputRef = useRef<HTMLTextAreaElement>(null);
-  const chatPanelRef = useRef<HTMLDivElement>(null);
   const composerRef = useRef<HTMLDivElement>(null);
-  const [composerStyle, setComposerStyle] = useState<CSSProperties>({});
   const [composerHeight, setComposerHeight] = useState(220);
   const initializedQuestionKeyRef = useRef<string | null>(null);
   const ignoreVisibilityUntilRef = useRef(0);
@@ -287,42 +290,19 @@ export function QuestionView() {
   }, [lecturerHints, markHintRead]);
 
   useEffect(() => {
-    const updateComposerLayout = () => {
-      const panel = chatPanelRef.current;
-      const composer = composerRef.current;
-      if (!panel) {
-        return;
-      }
-      const rect = panel.getBoundingClientRect();
-      const isDesktop = window.innerWidth >= 1024;
-      if (isDesktop) {
-        setComposerStyle({
-          position: "fixed",
-          left: Math.round(rect.left + 12),
-          width: Math.round(rect.width - 24),
-          bottom: "16px",
-          zIndex: 30,
-        });
-      } else {
-        setComposerStyle({
-          position: "fixed",
-          left: "12px",
-          right: "12px",
-          bottom: "calc(12px + env(safe-area-inset-bottom, 0px))",
-          zIndex: 30,
-        });
-      }
-      if (composer) {
-        setComposerHeight(composer.offsetHeight);
-      }
+    const composer = composerRef.current;
+    if (!composer) {
+      return;
+    }
+
+    const updateComposerHeight = () => {
+      setComposerHeight(composer.offsetHeight);
     };
 
-    updateComposerLayout();
-    window.addEventListener("resize", updateComposerLayout);
-    window.addEventListener("scroll", updateComposerLayout, true);
+    updateComposerHeight();
+    window.addEventListener("resize", updateComposerHeight);
     return () => {
-      window.removeEventListener("resize", updateComposerLayout);
-      window.removeEventListener("scroll", updateComposerLayout, true);
+      window.removeEventListener("resize", updateComposerHeight);
     };
   }, [imagePreview, showAttachmentMenu, cameraError, chatInput]);
 
@@ -535,11 +515,11 @@ export function QuestionView() {
           timestamp: new Date(h._creationTime).toISOString()
         }));
         // Fire-and-forget to Agent 2 — do NOT await, just dispatch
-        fetch(`${AGENT_BASE_URL}:8082/webhook/session_ended`, {
+        fetch(`${AGENT_BASE_URL}/agent2/webhook/session_ended`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            student_id: attemptId,
+            student_id: user?.userId ?? attemptId,
             assignment_id: assignmentId,
             session_log: sessionLog,
             proctoring_signals: [{ type: 'tab_switch', severity: violations > 2 ? 3 : 1, timestamp: new Date().toISOString() }]
@@ -603,41 +583,14 @@ export function QuestionView() {
     try {
       await persistCurrentDraft();
       
-      // Look at history to get the next level... no wait, the backend does this automatically now!
-      // We don't even need to send helpLevel.
-      const agentOutputRaw = await fetch(`${AGENT_BASE_URL}:8081/invoke`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          student_id: attemptId,
-          problem_id: currentQuestion._id,
-          student_reasoning_input: chatInput,
-        })
-      });
-
-      if (!agentOutputRaw.ok) {
-        throw new Error('Local Agent Socratic Node is offline or failing!');
-      }
-
-      const agentResult = await agentOutputRaw.json();
-      
-      // Store in Convex locally via the backend to update stats
-      const effectiveHelpLevel = agentResult.scaffolding_depth_applied || 1;
-      await storeAgentInteraction({
+      const agentResult = await sendChatMessageAction({
         attemptId: attemptId as Id<"attempts">,
-        helpLevel: effectiveHelpLevel,
+        questionId: currentQuestion._id,
         studentInput: chatInput,
-        aiResponse: agentResult.socratic_question || "Could not generate Socratic hint.",
-        tokensUsed: 0,
-        responseTimeMs: 0
       });
 
-      await updateHelpStats({
-        attemptId: attemptId as Id<"attempts">,
-        helpLevel: effectiveHelpLevel,
-        reasoningChars: studentReasoning.length,
-        reasoningTextSnapshot: studentReasoning || undefined,
-      });
+      // NO NEED to call updateHelpStats or storeInteraction manually, 
+      // the api.ai.sendChatMessage action handles it internally!
       
       setChatInput("");
       toast.success("CogAIt response received");
@@ -943,24 +896,24 @@ export function QuestionView() {
   return (
     <div className="min-h-screen">
       {consentVisible && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-          <div className="w-full max-w-lg rounded-2xl bg-white p-6 shadow-xl">
-            <h2 className="text-xl font-semibold text-gray-900">Assessment Integrity Consent</h2>
-            <p className="mt-2 text-sm text-gray-600">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/65 backdrop-blur-sm p-4">
+          <div className="w-full max-w-lg ui-modal p-6">
+            <h2 className="text-xl font-semibold text-white">Assessment Integrity Consent</h2>
+            <p className="mt-2 text-sm text-white/50">
               This assessment monitors tab visibility, fullscreen exits, and copy/paste attempts.
               Excessive violations can auto-submit your assignment.
             </p>
             <div className="mt-5 flex justify-end gap-2">
               <button
                 type="button"
-                className="rounded-lg border border-gray-200 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
+                className="rounded-xl border border-[var(--color-border)] px-4 py-2 text-sm text-white/60 hover:bg-[rgba(255,255,255,0.06)]"
                 onClick={() => navigate("/student/dashboard")}
               >
                 Exit
               </button>
               <button
                 type="button"
-                className="rounded-lg bg-blue-600 px-4 py-2 text-sm text-white hover:bg-blue-700"
+                className="rounded-xl bg-[var(--color-primary)] px-4 py-2 text-sm text-white hover:bg-[var(--color-primary-hover)] shadow-[0_8px_20px_rgba(72,32,220,0.35)]"
                 onClick={async () => {
                   if (!assignmentId) {
                     return;
@@ -987,19 +940,19 @@ export function QuestionView() {
           <div className="flex items-center gap-4">
             <button
               onClick={() => navigate("/student/dashboard")}
-              className="text-gray-600 hover:text-gray-900"
+              className="text-white/40 hover:text-white transition-colors"
             >
               <ArrowLeft className="h-5 w-5" />
             </button>
             <div>
-              <h1 className="text-lg font-semibold">Question {currentQuestionIndex + 1} of {assignment.length}</h1>
-              <p className="text-sm text-gray-600">{currentQuestion.subject} - {currentQuestion.topic}</p>
+              <h1 className="text-lg font-semibold text-white">Question {currentQuestionIndex + 1} of {assignment.length}</h1>
+              <p className="text-sm text-white/40">{currentQuestion.subject} - {currentQuestion.topic}</p>
             </div>
           </div>
           
           <div className="flex items-start gap-4">
             {violations > 0 && (
-              <div className="app-pill bg-red-100 text-red-700 mt-1">
+              <div className="app-pill bg-[rgba(239,68,68,0.15)] text-red-400 border-[rgba(239,68,68,0.3)] mt-1">
                 <AlertTriangle className="h-4 w-4 mr-1" />
                 <span className="text-sm">{violations} violations</span>
               </div>
@@ -1007,8 +960,8 @@ export function QuestionView() {
 
             <div className="flex flex-col items-end gap-2">
               <div
-                className={`app-pill flex items-center ${
-                  timeLeft < 0 ? "bg-red-100 text-red-700" : "bg-slate-100 text-slate-700"
+                className={`app-pill flex items-center backdrop-blur-sm ${
+                  timeLeft < 0 ? "bg-[rgba(239,68,68,0.15)] text-red-400 border-[rgba(239,68,68,0.3)]" : "bg-[rgba(255,255,255,0.06)] text-white/70"
                 }`}
               >
                 <Clock className="h-4 w-4 mr-1" />
@@ -1020,7 +973,7 @@ export function QuestionView() {
               <button
                 onClick={() => void handleVoluntarySubmit()}
                 disabled={isFinalSubmitting}
-                className="px-4 py-2 rounded-lg bg-indigo-600 text-white hover:bg-indigo-700 disabled:opacity-50"
+                className="px-4 py-2 rounded-xl bg-[var(--color-accent)] text-white hover:bg-[var(--color-accent-hover)] disabled:opacity-50 transition-all shadow-[0_8px_20px_rgba(220,40,120,0.35)]"
               >
                 {isFinalSubmitting ? "Submitting..." : "Submit Assignment"}
               </button>
@@ -1034,30 +987,30 @@ export function QuestionView() {
         <div className="min-h-0 overflow-y-auto pr-1">
           <div className="mx-auto max-w-4xl space-y-4">
             {/* Question */}
-            <div className="app-surface-card p-4">
+            <div className="spatial-widget p-4 spatial-enter spatial-stagger-1">
               <div className="flex items-center gap-2 mb-4">
-                <Brain className="h-5 w-5 text-blue-500" />
-                <h2 className="text-lg font-semibold">Question</h2>
-                <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                  currentQuestion.difficulty === 'easy' ? 'bg-green-100 text-green-800' :
-                  currentQuestion.difficulty === 'medium' ? 'bg-orange-100 text-orange-800' :
-                  'bg-red-100 text-red-800'
+                <Brain className="h-5 w-5 text-[var(--color-primary-solid)]" />
+                <h2 className="text-lg font-semibold text-white">Question</h2>
+                <span className={`px-2 py-1 rounded-full text-xs font-medium border ${
+                  currentQuestion.difficulty === 'easy' ? 'bg-[rgba(16,185,129,0.15)] text-emerald-400 border-[rgba(16,185,129,0.3)]' :
+                  currentQuestion.difficulty === 'medium' ? 'bg-[rgba(245,158,11,0.15)] text-amber-400 border-[rgba(245,158,11,0.3)]' :
+                  'bg-[rgba(239,68,68,0.15)] text-red-400 border-[rgba(239,68,68,0.3)]'
                 }`}>
                   {currentQuestion.difficulty}
                 </span>
               </div>
               
-              <div className="prose max-w-none">
+              <div className="prose prose-invert max-w-none">
                 <ContentBlocksRenderer
-                  className="text-gray-900 whitespace-pre-wrap"
+                  className="text-white/90 whitespace-pre-wrap"
                   contentBlocks={(currentQuestion as any).contentBlocks}
                   fallbackText={currentQuestion.questionText}
                 />
                 
                 {currentQuestion.givenVariables && (
-                  <div className="mt-4 p-4 rounded-lg bg-sky-50 border border-sky-100">
-                    <h4 className="font-medium text-blue-900 mb-2">Given:</h4>
-                    <MathRenderer className="text-blue-800 whitespace-pre-wrap" text={currentQuestion.givenVariables} />
+                  <div className="mt-4 p-4 rounded-xl bg-[rgba(72,32,220,0.1)] border border-[rgba(72,32,220,0.25)]">
+                    <h4 className="font-medium text-[var(--color-primary-solid)] mb-2">Given:</h4>
+                    <MathRenderer className="text-white/80 whitespace-pre-wrap" text={currentQuestion.givenVariables} />
                   </div>
                 )}
                 
@@ -1066,7 +1019,7 @@ export function QuestionView() {
                     <img 
                       src={currentQuestion.imageUrl} 
                       alt="Question diagram"
-                      className="max-w-full h-auto rounded-lg border"
+                      className="max-w-full h-auto rounded-xl border border-[var(--color-border)]"
                     />
                   </div>
                 )}
@@ -1074,14 +1027,14 @@ export function QuestionView() {
             </div>
 
             {/* Student Response */}
-            <div className="app-surface-card p-4">
-              <h3 className="text-base font-semibold mb-3">Your Response</h3>
+            <div className="spatial-widget p-4 spatial-enter spatial-stagger-2">
+              <h3 className="text-base font-semibold mb-3 text-white">Your Response</h3>
               
               <div className="space-y-4">
 
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className="block text-sm font-medium text-white/60 mb-2">
                     Final Answer *
                   </label>
                   {isMcqQuestion ? (
@@ -1089,22 +1042,22 @@ export function QuestionView() {
                       {mcqOptions.map((option) => (
                         <label
                           key={option.key}
-                          className={`flex items-start gap-3 p-3 border rounded-lg cursor-pointer transition-colors ${
+                          className={`flex items-start gap-3 p-3 border rounded-xl cursor-pointer transition-all backdrop-blur-sm ${
                             studentAnswer === option.key
-                              ? "border-blue-500 bg-blue-50"
-                              : "border-gray-200 hover:bg-gray-50"
+                              ? "border-[rgba(72,32,220,0.5)] bg-[rgba(72,32,220,0.15)]"
+                              : "border-[var(--color-border)] hover:bg-[rgba(255,255,255,0.04)] hover:border-[var(--color-border-strong)]"
                           }`}
                         >
                           <input
                             type="radio"
                             name="mcq-answer"
-                            className="mt-1"
+                            className="mt-1 accent-[var(--color-primary-solid)]"
                             checked={studentAnswer === option.key}
                             onChange={() => setStudentAnswer(option.key)}
                           />
-                          <div className="text-sm text-gray-800">
+                          <div className="text-sm text-white/80">
                             <span className="font-semibold mr-2">{option.key}.</span>
-                            {option.text}
+                            <MathRenderer className="inline" text={option.text} />
                           </div>
                         </label>
                       ))}
@@ -1112,7 +1065,7 @@ export function QuestionView() {
                   ) : (
                     <input
                       ref={answerRef}
-                      className="w-full px-4 py-3 rounded-lg border border-gray-200 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none"
+                      className="w-full px-4 py-3 rounded-xl border border-[var(--color-border)] bg-[rgba(255,255,255,0.04)] text-white focus:border-[var(--color-primary-solid)] focus:ring-1 focus:ring-[rgba(72,32,220,0.4)] outline-none backdrop-blur-sm"
                       value={studentAnswer}
                       onChange={(e) => setStudentAnswer(e.target.value)}
                       placeholder="Enter your final numerical answer"
@@ -1129,7 +1082,7 @@ export function QuestionView() {
                     setMarkedForReview(true);
                     void persistCurrentDraft("review");
                   }}
-                  className={`px-3 py-2 rounded-lg text-sm ${markedForReview ? "bg-purple-100 text-purple-800" : "bg-gray-100 text-gray-700 hover:bg-gray-200"}`}
+                  className={`px-3 py-2 rounded-xl text-sm border transition-all ${markedForReview ? "bg-[rgba(139,92,246,0.15)] text-violet-400 border-[rgba(139,92,246,0.3)]" : "bg-[rgba(255,255,255,0.04)] text-white/60 border-[var(--color-border)] hover:bg-[rgba(255,255,255,0.08)]"}`}
                 >
                   Mark for Review
                 </button>
@@ -1140,7 +1093,7 @@ export function QuestionView() {
                     setMarkedForReview(false);
                     void persistCurrentDraft("skipped");
                   }}
-                  className={`px-3 py-2 rounded-lg text-sm ${questionStatus === "skipped" ? "bg-red-100 text-red-700" : "bg-gray-100 text-gray-700 hover:bg-gray-200"}`}
+                  className={`px-3 py-2 rounded-xl text-sm border transition-all ${questionStatus === "skipped" ? "bg-[rgba(239,68,68,0.15)] text-red-400 border-[rgba(239,68,68,0.3)]" : "bg-[rgba(255,255,255,0.04)] text-white/60 border-[var(--color-border)] hover:bg-[rgba(255,255,255,0.08)]"}`}
                 >
                   Mark as Skipped
                 </button>
@@ -1151,7 +1104,7 @@ export function QuestionView() {
                     setMarkedForReview(false);
                     void persistCurrentDraft("answered");
                   }}
-                  className={`px-3 py-2 rounded-lg text-sm ${questionStatus === "answered" ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-700 hover:bg-gray-200"}`}
+                  className={`px-3 py-2 rounded-xl text-sm border transition-all ${questionStatus === "answered" ? "bg-[rgba(16,185,129,0.15)] text-emerald-400 border-[rgba(16,185,129,0.3)]" : "bg-[rgba(255,255,255,0.04)] text-white/60 border-[var(--color-border)] hover:bg-[rgba(255,255,255,0.08)]"}`}
                 >
                   Mark as Answered
                 </button>
@@ -1160,7 +1113,7 @@ export function QuestionView() {
               <div className="flex justify-between mt-3">
                 <button
                   onClick={handleSaveDraft}
-                  className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
+                  className="px-4 py-2 bg-[rgba(255,255,255,0.06)] text-white/60 rounded-xl hover:bg-[rgba(255,255,255,0.1)] transition-all border border-[var(--color-border)]"
                 >
                   Save Draft
                 </button>
@@ -1168,7 +1121,7 @@ export function QuestionView() {
                 <button
                   onClick={handleSubmit}
                   disabled={isSubmitting || !studentAnswer.trim()}
-                  className="px-6 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="px-6 py-2 bg-[var(--color-primary)] text-white rounded-xl hover:bg-[var(--color-primary-hover)] transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-[0_8px_20px_rgba(72,32,220,0.35)]"
                 >
                   {isSubmitting ? "Submitting..." : "Submit Answer"}
                 </button>
@@ -1177,7 +1130,7 @@ export function QuestionView() {
 
             {/* Navigation */}
             <div className="space-y-3">
-              <div className="text-sm text-gray-600">
+              <div className="text-sm text-white/40">
                 {statusCounts.answered} Answered | {statusCounts.skipped} Skipped | {statusCounts.review} Marked | {statusCounts.unattempted} Remaining
               </div>
               <div className="grid grid-cols-8 md:grid-cols-10 gap-2">
@@ -1186,17 +1139,17 @@ export function QuestionView() {
                   const isCurrent = idx === currentQuestionIndex;
                   const tone =
                     status === "answered"
-                      ? "bg-green-100 text-green-800 border-green-300"
+                      ? "bg-[rgba(16,185,129,0.15)] text-emerald-400 border-[rgba(16,185,129,0.3)]"
                       : status === "skipped"
-                        ? "bg-red-100 text-red-800 border-red-300"
+                        ? "bg-[rgba(239,68,68,0.15)] text-red-400 border-[rgba(239,68,68,0.3)]"
                         : status === "review"
-                          ? "bg-purple-100 text-purple-800 border-purple-300"
-                          : "bg-white text-gray-700 border-gray-300";
+                          ? "bg-[rgba(139,92,246,0.15)] text-violet-400 border-[rgba(139,92,246,0.3)]"
+                          : "bg-[rgba(255,255,255,0.04)] text-white/50 border-[var(--color-border)]";
                   return (
                     <button
                       key={question._id}
                       type="button"
-                      className={`h-9 rounded-md border text-xs font-medium ${tone} ${isCurrent ? "ring-2 ring-blue-400" : ""}`}
+                      className={`h-9 rounded-lg border text-xs font-medium ${tone} ${isCurrent ? "ring-2 ring-[var(--color-primary-solid)]" : ""} transition-all`}
                       onClick={() => {
                         void persistCurrentDraft();
                         navigate(`/student/assignment/${assignmentId}/question/${idx + 1}`);
@@ -1218,7 +1171,7 @@ export function QuestionView() {
                     }
                   }}
                 disabled={currentQuestionIndex === 0}
-                className="inline-flex items-center px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors disabled:opacity-50"
+                className="inline-flex items-center px-4 py-2 bg-[rgba(255,255,255,0.06)] text-white/60 rounded-xl hover:bg-[rgba(255,255,255,0.1)] transition-all disabled:opacity-50 border border-[var(--color-border)]"
               >
                 <ArrowLeft className="h-4 w-4 mr-2" />
                 Previous
@@ -1233,7 +1186,7 @@ export function QuestionView() {
                     }
                   }}
                 disabled={currentQuestionIndex === assignment.length - 1}
-                className="inline-flex items-center px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors disabled:opacity-50"
+                className="inline-flex items-center px-4 py-2 bg-[var(--color-primary)] text-white rounded-xl hover:bg-[var(--color-primary-hover)] transition-all disabled:opacity-50 shadow-[0_8px_20px_rgba(72,32,220,0.35)]"
               >
                 Next
                 <ArrowRight className="h-4 w-4 ml-2" />
@@ -1244,26 +1197,31 @@ export function QuestionView() {
         </div>
 
         {/* AI Chat Sidebar */}
-        <div ref={chatPanelRef} className="relative min-h-0 app-surface-card rounded-lg flex flex-col overflow-hidden">
-          <div className="p-4 border-b">
+        <div className="relative min-h-0 spatial-widget widget-purple rounded-[16px] flex flex-col overflow-hidden spatial-enter spatial-stagger-3">
+          <div className="p-4 border-b border-[rgba(72,32,220,0.25)]">
             <div className="flex items-center gap-2 mb-3">
-              <MessageCircle className="h-5 w-5 text-blue-500" />
-              <h3 className="font-semibold">CogAIt</h3>
+              <MessageCircle className="h-5 w-5 text-[var(--color-primary-solid)]" />
+              <h3 className="font-semibold text-white">CogAIt</h3>
             </div>
             {(lecturerHints ?? []).length > 0 && (
               <div className="mb-3 space-y-2">
                 {(lecturerHints ?? []).slice(-2).map((hint) => (
-                  <div key={hint._id} className="rounded-lg border border-purple-200 bg-purple-50 px-3 py-2 text-xs text-purple-900">
-                    <div className="font-semibold mb-1">Your Lecturer</div>
+                  <div key={hint._id} className="rounded-xl border border-[rgba(139,92,246,0.3)] bg-[rgba(139,92,246,0.1)] px-3 py-2 text-xs text-white/80 backdrop-blur-sm">
+                    <div className="font-semibold mb-1 text-violet-400">Your Lecturer</div>
                     <div>{hint.message}</div>
                   </div>
                 ))}
               </div>
             )}
-            <div className="flex items-center justify-between rounded-lg bg-gray-50 px-3 py-2 text-xs">
-              <span className="flex items-center gap-2">
+            <div className="flex items-center justify-between rounded-xl bg-[rgba(255,255,255,0.04)] border border-[var(--color-border)] px-3 py-2 text-xs">
+              <span className="flex items-center gap-2 text-white/50">
                 <span>Current State:</span>
-                <span className={`px-2 py-0.5 rounded-full font-medium ${currentLevelInfo.color}`}>
+                <span className={`px-2 py-0.5 rounded-full font-medium border ${
+                  currentLevelInfo.level === 1 ? 'bg-[rgba(72,32,220,0.15)] text-[var(--color-primary-solid)] border-[rgba(72,32,220,0.3)]' :
+                  currentLevelInfo.level === 2 ? 'bg-[rgba(16,185,129,0.15)] text-emerald-400 border-[rgba(16,185,129,0.3)]' :
+                  currentLevelInfo.level === 3 ? 'bg-[rgba(245,158,11,0.15)] text-amber-400 border-[rgba(245,158,11,0.3)]' :
+                  'bg-[rgba(239,68,68,0.15)] text-red-400 border-[rgba(239,68,68,0.3)]'
+                }`}>
                   {currentLevelInfo.name}
                 </span>
               </span>
@@ -1277,7 +1235,7 @@ export function QuestionView() {
             style={{ paddingBottom: composerHeight + 24 }}
           >
             {mergedChatHistory.length === 0 ? (
-              <div className="text-center text-gray-500 mt-8">
+              <div className="text-center text-white/30 mt-8">
                 <HelpCircle className="h-8 w-8 mx-auto mb-2 opacity-50" />
                 <p className="text-sm">No CogAIt interactions yet</p>
                 <p className="text-xs">Ask anything about this question to get started</p>
@@ -1285,16 +1243,16 @@ export function QuestionView() {
             ) : (
               mergedChatHistory.map((interaction) => (
                 <div key={interaction.id} className="space-y-3">
-                  <div className="bg-blue-50 rounded-lg p-3">
-                    <div className="text-xs text-blue-600 font-medium mb-1">
+                  <div className="bg-[rgba(72,32,220,0.15)] border border-[rgba(72,32,220,0.25)] rounded-xl p-3 backdrop-blur-sm">
+                    <div className="text-xs text-[var(--color-primary-solid)] font-medium mb-1">
                       {`You (${LEVEL_NAMES[interaction.helpLevel as keyof typeof LEVEL_NAMES]})`}
                     </div>
-                    <p className="text-sm text-gray-800">{interaction.studentInput}</p>
+                    <p className="text-sm text-white/80">{interaction.studentInput}</p>
                   </div>
                   
-                  <div className="bg-gray-50 rounded-lg p-3">
-                    <div className="text-xs text-gray-600 font-medium mb-1">CogAIt</div>
-                    <MathRenderer className="text-sm text-gray-800 whitespace-pre-wrap" text={interaction.aiResponse} />
+                  <div className="bg-[rgba(255,255,255,0.04)] border border-[var(--color-border)] rounded-xl p-3 backdrop-blur-sm">
+                    <div className="text-xs text-white/40 font-medium mb-1">CogAIt</div>
+                    <MathRenderer className="text-sm text-white/80 whitespace-pre-wrap" text={interaction.aiResponse} />
                   </div>
                 </div>
               ))
@@ -1302,46 +1260,46 @@ export function QuestionView() {
           </div>
 
           {/* Chat Input */}
-          <div ref={composerRef} className="z-20" style={composerStyle}>
-            <div className="space-y-3 ui-card p-3 shadow-md">
+          <div className="border-t border-[rgba(72,32,220,0.25)] bg-[rgba(10,10,15,0.45)] p-3 backdrop-blur-xl">
+            <div ref={composerRef} className="space-y-3">
               {imagePreview && (
-                <div className="relative rounded-lg border p-2">
+                <div className="relative rounded-xl border border-[var(--color-border)] p-2">
                   <img
                     src={imagePreview}
                     alt="Upload preview"
-                    className="w-full h-24 object-cover rounded-md"
+                    className="w-full h-24 object-cover rounded-lg"
                   />
                   <button
-                    className="absolute top-3 right-3 bg-white rounded-full p-1 shadow-sm"
+                    className="absolute top-3 right-3 bg-[rgba(10,10,15,0.9)] rounded-full p-1 shadow-sm border border-[var(--color-border)]"
                     onClick={() => {
                       setImagePreview(null);
                       setImageBase64(null);
                     }}
                   >
-                    <X className="h-4 w-4" />
+                    <X className="h-4 w-4 text-white" />
                   </button>
                 </div>
               )}
 
-              <div className="rounded-xl border border-gray-200 p-2">
+              <div className="rounded-xl border border-[var(--color-border)] bg-[rgba(255,255,255,0.04)] p-2">
                 <div className="flex items-end gap-2">
                   <div className="relative">
                     <button
                       onClick={() => setShowAttachmentMenu((prev) => !prev)}
                       disabled={isImageSubmitting || isChatting}
-                      className="h-9 w-9 rounded-full bg-gray-100 hover:bg-gray-200 inline-flex items-center justify-center disabled:opacity-50"
+                      className="h-9 w-9 rounded-full bg-[rgba(255,255,255,0.06)] hover:bg-[rgba(255,255,255,0.12)] inline-flex items-center justify-center disabled:opacity-50 text-white/60 border border-[var(--color-border)] transition-all"
                     >
                       <Plus className="h-4 w-4" />
                     </button>
                     {showAttachmentMenu && (
-                      <div className="absolute bottom-11 left-0 ui-card p-1 z-20 w-36">
+                      <div className="absolute bottom-11 left-0 spatial-widget p-1 z-20 w-36">
                         <button
                           onClick={() => {
                             setShowAttachmentMenu(false);
                             ignoreVisibilityUntilRef.current = Date.now() + 3000;
                             void openCamera();
                           }}
-                          className="w-full text-left px-2 py-2 rounded hover:bg-gray-50 text-sm inline-flex items-center"
+                          className="w-full text-left px-2 py-2 rounded-lg hover:bg-[rgba(255,255,255,0.06)] text-sm inline-flex items-center text-white/70"
                         >
                           <Camera className="h-4 w-4 mr-2" />
                           Camera
@@ -1352,7 +1310,7 @@ export function QuestionView() {
                             ignoreVisibilityUntilRef.current = Date.now() + 3000;
                             fileInputRef.current?.click();
                           }}
-                          className="w-full text-left px-2 py-2 rounded hover:bg-gray-50 text-sm inline-flex items-center"
+                          className="w-full text-left px-2 py-2 rounded-lg hover:bg-[rgba(255,255,255,0.06)] text-sm inline-flex items-center text-white/70"
                         >
                           <Upload className="h-4 w-4 mr-2" />
                           Upload
@@ -1363,7 +1321,7 @@ export function QuestionView() {
 
                   <textarea
                     ref={chatInputRef}
-                    className="flex-1 px-3 py-2 rounded-lg border border-gray-200 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none text-sm resize-none"
+                    className="flex-1 px-3 py-2 rounded-xl border border-[var(--color-border)] bg-transparent text-white focus:border-[var(--color-primary-solid)] focus:ring-1 focus:ring-[rgba(72,32,220,0.4)] outline-none text-sm resize-none placeholder:text-white/30"
                     rows={2}
                     value={chatInput}
                     onChange={(e) => setChatInput(e.target.value)}
@@ -1383,7 +1341,7 @@ export function QuestionView() {
                   <button
                     onClick={() => void handleComposerSend()}
                     disabled={isChatting || isImageSubmitting || (!chatInput.trim() && !imageBase64)}
-                    className="h-9 w-9 rounded-full bg-blue-500 text-white hover:bg-blue-600 inline-flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="h-9 w-9 rounded-full bg-[var(--color-primary)] text-white hover:bg-[var(--color-primary-hover)] inline-flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-[0_4px_12px_rgba(72,32,220,0.3)]"
                   >
                     <ArrowUp className="h-4 w-4" />
                   </button>
@@ -1406,7 +1364,7 @@ export function QuestionView() {
                 onChange={(e) => void handleImageSelected(e.target.files?.[0] ?? null)}
               />
 
-              {cameraError && <p className="text-xs text-red-600">{cameraError}</p>}
+              {cameraError && <p className="text-xs text-red-400">{cameraError}</p>}
             </div>
           </div>
         </div>
@@ -1439,6 +1397,14 @@ export function QuestionView() {
           </div>
         </div>
       )}
+
+      {/* assignmentId && (
+        <RemediationConsent
+          assignmentId={assignmentId as Id<"assignments">}
+          studentId={user?.userId ?? null}
+          agentBaseUrl={AGENT_BASE_URL}
+        />
+      ) */}
     </div>
   );
 }

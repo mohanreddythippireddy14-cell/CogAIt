@@ -1,5 +1,6 @@
 // Tools for Agent 1 (Socratic Agent)
 import { convex } from '../memory/convex_client.js';
+import { appendShortTermInteraction, getShortTermSessionMemory, updateShortTermSessionMemory } from '../memory/short_term_memory.js';
 
 /**
  * reasoning_validator(): evaluates whether student input contains genuine reasoning attempt
@@ -16,10 +17,14 @@ export const reasoningValidator = (input: string): boolean => {
  */
 export const levelTracker = {
   read: async (sessionId: string): Promise<number> => {
-    // In production, this would query Convex or Vertex AI Chat Session.
-    return 1;
+    const memory = await getShortTermSessionMemory(sessionId, "active");
+    return memory.currentScaffoldingDepth || 1;
   },
   write: async (sessionId: string, newDepth: number): Promise<void> => {
+    await updateShortTermSessionMemory(sessionId, "active", (memory) => ({
+      ...memory,
+      currentScaffoldingDepth: newDepth,
+    }));
     console.log(`[LevelTracker] Updated scaffolding depth to ${newDepth} for session ${sessionId}`);
   }
 };
@@ -28,6 +33,14 @@ export const levelTracker = {
  * session_state(): reads current problem context and student history for this session
  */
 export const sessionState = async (problemId: string, studentId: string): Promise<string> => {
-  // In production, queries Convex for the problem context.
-  return `Context for problem ${problemId}: Standard kinematics problem.`;
+  const memory = await appendShortTermInteraction(studentId, "active", {
+    timestamp: new Date().toISOString(),
+    problemId,
+    scaffoldingDepth: (await getShortTermSessionMemory(studentId, "active")).currentScaffoldingDepth,
+  });
+  const recentContext = memory.interactions
+    .slice(-3)
+    .map((item) => `${item.problemId}:${item.studentInput ?? "context_opened"}`)
+    .join(" | ");
+  return `Context for problem ${problemId}. Recent user session memory: ${recentContext || "none yet"}.`;
 };

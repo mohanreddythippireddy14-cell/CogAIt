@@ -142,7 +142,7 @@ export function ProfileMenu({
       <button
         type="button"
         onClick={() => setOpen((prev) => !prev)}
-        className="h-10 w-10 rounded-xl bg-[var(--color-primary)] text-white font-semibold inline-flex items-center justify-center shadow-sm transition-colors hover:bg-[var(--color-primary-hover)]"
+        className="h-10 w-10 rounded-2xl bg-[linear-gradient(135deg,var(--color-primary-hover),var(--color-primary-active))] text-white font-semibold inline-flex items-center justify-center shadow-[0_16px_30px_rgba(77,105,255,0.28)] transition-all hover:-translate-y-[1px]"
         aria-label="Open account menu"
       >
         {initial}
@@ -155,14 +155,14 @@ export function ProfileMenu({
             onClick={() => setOpen(false)}
             aria-hidden="true"
           />
-          <div className="absolute right-0 mt-2 w-80 ui-card rounded-3xl p-4 z-20">
+          <div className="absolute right-0 mt-2 w-80 rounded-3xl p-4 z-20 bg-white/95 backdrop-blur-xl shadow-xl border border-gray-100">
             <div className="pb-3 border-b text-center">
               <p className="text-sm text-muted">{email ?? "No email found"}</p>
               <p className="text-xs text-subtle mt-1">Managed by CogAIt</p>
             </div>
 
             <div className="py-4 text-center">
-              <div className="h-20 w-20 mx-auto rounded-2xl bg-[var(--color-primary)] text-white text-4xl font-medium inline-flex items-center justify-center">
+              <div className="h-20 w-20 mx-auto rounded-[1.5rem] bg-[linear-gradient(135deg,var(--color-primary-hover),var(--color-primary-active))] text-white text-4xl font-medium inline-flex items-center justify-center shadow-[0_18px_36px_rgba(77,105,255,0.25)]">
                 {initial}
               </div>
               <p className="text-3xl mt-3">Hi, {fullName.split(" ")[0]}!</p>

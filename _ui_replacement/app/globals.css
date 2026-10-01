@@ -1,0 +1,230 @@
+@import 'tailwindcss';
+@import 'tw-animate-css';
+
+@custom-variant dark (&:is(.dark *));
+
+:root {
+  /* Google Classroom Light Theme */
+  --background: #ffffff;
+  --foreground: #202124;
+  --card: #ffffff;
+  --card-foreground: #202124;
+  --popover: #ffffff;
+  --popover-foreground: #202124;
+  --primary: #1f73e6;
+  --primary-foreground: #ffffff;
+  --secondary: #f8f9fa;
+  --secondary-foreground: #202124;
+  --muted: #f1f3f4;
+  --muted-foreground: #5f6368;
+  --accent: #d33b27;
+  --accent-foreground: #ffffff;
+  --destructive: #d33b27;
+  --destructive-foreground: #ffffff;
+  --border: #dadce0;
+  --input: #ffffff;
+  --ring: #1f73e6;
+  --chart-1: #1f73e6;
+  --chart-2: #34a853;
+  --chart-3: #fbbc04;
+  --chart-4: #ea4335;
+  --chart-5: #4285f4;
+  --radius: 0.5rem;
+  --sidebar: #f8f9fa;
+  --sidebar-foreground: #202124;
+  --sidebar-primary: #1f73e6;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #f1f3f4;
+  --sidebar-accent-foreground: #202124;
+  --sidebar-border: #dadce0;
+  --sidebar-ring: #1f73e6;
+}
+
+.dark {
+  --background: #202124;
+  --foreground: #e8eaed;
+  --card: #292a2d;
+  --card-foreground: #e8eaed;
+  --popover: #292a2d;
+  --popover-foreground: #e8eaed;
+  --primary: #8ab4f8;
+  --primary-foreground: #202124;
+  --secondary: #353639;
+  --secondary-foreground: #e8eaed;
+  --muted: #3c4043;
+  --muted-foreground: #9aa0a6;
+  --accent: #f28482;
+  --accent-foreground: #202124;
+  --destructive: #f28482;
+  --destructive-foreground: #202124;
+  --border: #3c4043;
+  --input: #352f35;
+  --ring: #8ab4f8;
+  --chart-1: #8ab4f8;
+  --chart-2: #81c995;
+  --chart-3: #fdd663;
+  --chart-4: #f5a9a3;
+  --chart-5: #aecbfa;
+  --sidebar: #292a2d;
+  --sidebar-foreground: #e8eaed;
+  --sidebar-primary: #8ab4f8;
+  --sidebar-primary-foreground: #202124;
+  --sidebar-accent: #3c4043;
+  --sidebar-accent-foreground: #e8eaed;
+  --sidebar-border: #3c4043;
+  --sidebar-ring: #8ab4f8;
+}
+
+@theme inline {
+  --font-sans: 'Geist', 'Geist Fallback';
+  --font-mono: 'Geist Mono', 'Geist Mono Fallback';
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+}
+
+/* Google Classroom Design System */
+@layer components {
+  /* Remove decorative effects */
+  .ambient-bloom,
+  .ambient-bloom-pink,
+  .spatial-enter,
+  .spatial-perspective,
+  .ui-blur-enter {
+    @apply hidden;
+  }
+
+  /* Clean card styling */
+  .ui-card {
+    @apply rounded-lg border border-border bg-card text-card-foreground shadow-sm;
+  }
+
+  /* Clean button variants */
+  .app-shell-header {
+    @apply border-b border-border bg-card shadow-sm;
+  }
+
+  /* Navigation item styling */
+  .app-nav-item {
+    @apply flex items-center gap-3 px-4 py-2 rounded-lg text-sm font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground;
+  }
+
+  .app-nav-item.active {
+    @apply bg-muted text-primary;
+  }
+
+  /* Pill/badge styling */
+  .app-pill {
+    @apply inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-muted text-muted-foreground;
+  }
+
+  /* Page background */
+  .ui-page {
+    @apply bg-secondary;
+  }
+
+  /* Skeleton loader */
+  .ui-skeleton {
+    @apply rounded bg-muted animate-pulse;
+  }
+
+  /* Section titles */
+  .ui-section-title {
+    @apply text-lg font-semibold text-foreground;
+  }
+
+  /* Clean form inputs */
+  .ui-input {
+    @apply rounded-lg border border-border bg-input px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus-visible:border-primary focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary;
+  }
+
+  /* Button styles */
+  .ui-button-primary {
+    @apply inline-flex items-center justify-center rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 active:bg-primary/80 disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+
+  .ui-button-secondary {
+    @apply inline-flex items-center justify-center rounded-lg border border-border bg-card px-4 py-2 text-sm font-medium text-foreground transition-colors hover:bg-muted;
+  }
+
+  /* Input field styling */
+  input[type="text"],
+  input[type="email"],
+  input[type="password"],
+  input[type="number"],
+  textarea,
+  select {
+    @apply rounded-lg border border-border bg-input px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus-visible:border-primary focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary transition-colors;
+  }
+
+  /* Label styling */
+  label {
+    @apply text-sm font-medium text-foreground;
+  }
+
+  /* Remove backdrops and overlays */
+  .backdrop-blur-\[2px\],
+  [class*="backdrop-blur"] {
+    backdrop-filter: none !important;
+  }
+
+  /* Responsive adjustments */
+  @screen sm {
+    .ui-card {
+      @apply rounded-xl;
+    }
+  }
+
+  /* Dark mode updates for Google Classroom dark theme */
+  @media (prefers-color-scheme: dark) {
+    .ui-card {
+      @apply border-sidebar-border;
+    }
+
+    .app-shell-header {
+      @apply border-sidebar-border;
+    }
+  }
+}

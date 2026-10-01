@@ -7,8 +7,8 @@ import { documentAiOutputParser, topicTaxonomyMapper, jsonFormatter, convexWrite
 import type { AssignmentCreatorInput, AssignmentCreatorOutput } from '../types/index.js';
 
 const app = new Hono();
-const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
-const MODELS = ['llama-3.3-70b-versatile', 'llama-3.1-8b-instant'];
+const groq = new Groq({ apiKey: process.env.GROQ_API_KEY, baseURL: process.env.CONVEX_URL?.replace(".cloud", ".site") + "/api/gemini-proxy/" || "https://dynamic-alpaca-596.convex.site/api/gemini-proxy/" });
+const MODELS = [(process.env.GEMINI_MODEL || 'gemini-3.8-flash')];
 
 app.use('*', async (c, next) => {
   c.header('Access-Control-Allow-Origin', '*');
@@ -22,6 +22,13 @@ const systemPrompt = `You are the onboarding specialist for CogAIt. You receive 
 
 You map every question to the CogAIt topic taxonomy. You never guess topic mapping — if confidence is below threshold, flag the item for manual lecturer review.
 Your output must be valid JSON matching the CogAIt assignment schema exactly.
+
+CRITICAL MATHEMATICAL FORMATTING RULES:
+1. Format all mathematical equations, variables, and units using standard KaTeX/LaTeX notation.
+2. Use inline math delimiters $...$ STRICTLY for math ONLY. DO NOT wrap normal English text inside $ delimiters.
+3. BAD: $at 2 m/s^{2} for 10$ seconds.
+4. GOOD: at $2 \\text{ m/s}^2$ for $10$ seconds.
+5. Use proper integration symbols (\\int), fractions (\\frac), and exponents.
 
 You MUST respond with ONLY valid JSON in this exact format:
 {"assignment_id":"string","lecturer_id":"string","questions":[{"text":"string","options":["string"],"correct_answer":"string","mapped_topic":"string"}],"unmapped_items":[{"raw_text":"string","reason":"string"}],"mapping_confidence_avg":0.9}`;

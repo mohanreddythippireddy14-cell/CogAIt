@@ -1,0 +1,10 @@
+{
+  "event_name": "remediation_offer_ready",
+  "version": "1.0.0",
+  "timestamp": "ISO-8601",
+  "payload": {
+    "student_id": "string",
+    "weak_topics": ["string"],
+    "pending_remediation_id": "string"
+  }
+}

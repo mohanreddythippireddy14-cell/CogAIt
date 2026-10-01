@@ -7,8 +7,8 @@ import { reasoningValidator, levelTracker, sessionState } from '../tools/agent1_
 import type { SocraticAgentInput, SocraticAgentOutput } from '../types/index.js';
 
 const app = new Hono();
-const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
-const MODELS = ['llama-3.3-70b-versatile', 'llama-3.1-8b-instant'];
+const groq = new Groq({ apiKey: process.env.GROQ_API_KEY, baseURL: process.env.CONVEX_URL?.replace(".cloud", ".site") + "/api/gemini-proxy/" || "https://dynamic-alpaca-596.convex.site/api/gemini-proxy/" });
+const MODELS = [(process.env.GEMINI_MODEL || 'gemini-3.8-flash')];
 
 app.use('*', async (c, next) => {
   c.header('Access-Control-Allow-Origin', '*');

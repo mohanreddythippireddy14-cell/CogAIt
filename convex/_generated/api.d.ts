@@ -10,6 +10,7 @@
 
 import type * as adminMetrics from "../adminMetrics.js";
 import type * as agentAPI from "../agentAPI.js";
+import type * as agentConversation from "../agentConversation.js";
 import type * as ai from "../ai.js";
 import type * as analytics from "../analytics.js";
 import type * as apiV1 from "../apiV1.js";
@@ -44,7 +45,10 @@ import type * as dashboard_monitoring from "../dashboard/monitoring.js";
 import type * as dashboard_recommendations from "../dashboard/recommendations.js";
 import type * as dashboard_studentProfile from "../dashboard/studentProfile.js";
 import type * as dashboard_teacherOverview from "../dashboard/teacherOverview.js";
+import type * as deepDive from "../deepDive.js";
+import type * as demoSeed from "../demoSeed.js";
 import type * as domain_aiPolicy from "../domain/aiPolicy.js";
+import type * as domain_aiQuestionNormalization from "../domain/aiQuestionNormalization.js";
 import type * as domain_aiRegression from "../domain/aiRegression.js";
 import type * as domain_contentBlocks from "../domain/contentBlocks.js";
 import type * as domain_costGovernance from "../domain/costGovernance.js";
@@ -52,6 +56,7 @@ import type * as domain_scoring from "../domain/scoring.js";
 import type * as domain_strictJsonValidation from "../domain/strictJsonValidation.js";
 import type * as export_ from "../export.js";
 import type * as facultyAssignments from "../facultyAssignments.js";
+import type * as geminiProxy from "../geminiProxy.js";
 import type * as http from "../http.js";
 import type * as infrastructure_aiQueue from "../infrastructure/aiQueue.js";
 import type * as infrastructure_auditTrail from "../infrastructure/auditTrail.js";
@@ -65,6 +70,7 @@ import type * as interventions from "../interventions.js";
 import type * as lib_authGuards from "../lib/authGuards.js";
 import type * as migrations from "../migrations.js";
 import type * as notifications from "../notifications.js";
+import type * as pendingRemediations from "../pendingRemediations.js";
 import type * as questions from "../questions.js";
 import type * as rateLimits from "../rateLimits.js";
 import type * as router from "../router.js";
@@ -82,6 +88,7 @@ import type {
 declare const fullApi: ApiFromModules<{
   adminMetrics: typeof adminMetrics;
   agentAPI: typeof agentAPI;
+  agentConversation: typeof agentConversation;
   ai: typeof ai;
   analytics: typeof analytics;
   apiV1: typeof apiV1;
@@ -116,7 +123,10 @@ declare const fullApi: ApiFromModules<{
   "dashboard/recommendations": typeof dashboard_recommendations;
   "dashboard/studentProfile": typeof dashboard_studentProfile;
   "dashboard/teacherOverview": typeof dashboard_teacherOverview;
+  deepDive: typeof deepDive;
+  demoSeed: typeof demoSeed;
   "domain/aiPolicy": typeof domain_aiPolicy;
+  "domain/aiQuestionNormalization": typeof domain_aiQuestionNormalization;
   "domain/aiRegression": typeof domain_aiRegression;
   "domain/contentBlocks": typeof domain_contentBlocks;
   "domain/costGovernance": typeof domain_costGovernance;
@@ -124,6 +134,7 @@ declare const fullApi: ApiFromModules<{
   "domain/strictJsonValidation": typeof domain_strictJsonValidation;
   export: typeof export_;
   facultyAssignments: typeof facultyAssignments;
+  geminiProxy: typeof geminiProxy;
   http: typeof http;
   "infrastructure/aiQueue": typeof infrastructure_aiQueue;
   "infrastructure/auditTrail": typeof infrastructure_auditTrail;
@@ -137,6 +148,7 @@ declare const fullApi: ApiFromModules<{
   "lib/authGuards": typeof lib_authGuards;
   migrations: typeof migrations;
   notifications: typeof notifications;
+  pendingRemediations: typeof pendingRemediations;
   questions: typeof questions;
   rateLimits: typeof rateLimits;
   router: typeof router;

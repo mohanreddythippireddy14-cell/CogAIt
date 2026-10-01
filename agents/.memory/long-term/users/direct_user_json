@@ -1,0 +1,19 @@
+{
+  "userId": "direct_user",
+  "studyPreferences": {
+    "preferredStudyWindowStart": "17:00",
+    "preferredStudyWindowEnd": "22:00"
+  },
+  "sessionHistory": [
+    {
+      "assignmentId": "assign-direct",
+      "recordedAt": "2026-04-14T06:16:18.979Z",
+      "payload": {
+        "hello": "world"
+      }
+    }
+  ],
+  "cisHistory": [],
+  "vectorPatterns": [],
+  "lastUpdatedAt": "2026-04-14T06:16:18.979Z"
+}

@@ -1,0 +1,15 @@
+{
+  "userId": "direct_user",
+  "sessionId": "active",
+  "currentScaffoldingDepth": 2,
+  "lastUpdatedAt": "2026-04-14T06:16:18.985Z",
+  "interactions": [
+    {
+      "timestamp": "2026-04-14T06:16:18.985Z",
+      "problemId": "prob-direct",
+      "studentInput": "test input",
+      "scaffoldingDepth": 2
+    }
+  ],
+  "activeProblemId": "prob-direct"
+}

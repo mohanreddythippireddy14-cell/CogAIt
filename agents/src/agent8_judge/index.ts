@@ -1,11 +1,13 @@
 import { serve } from '@hono/node-server';
 import { Hono } from 'hono';
 import Groq from 'groq-sdk';
+import { runPreExecutionHooks } from '../hooks/pre_hooks.js';
+import { runPostExecutionHooks } from '../hooks/post_hooks.js';
 import type { JudgeInput, JudgeOutput } from '../types/index.js';
 
 const app = new Hono();
-const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
-const MODELS = ['llama-3.3-70b-versatile', 'llama-3.1-8b-instant'];
+const groq = new Groq({ apiKey: process.env.GROQ_API_KEY, baseURL: process.env.CONVEX_URL?.replace(".cloud", ".site") + "/api/gemini-proxy/" || "https://dynamic-alpaca-596.convex.site/api/gemini-proxy/" });
+const MODELS = [(process.env.GEMINI_MODEL || 'gemini-3.8-flash')];
 
 app.use('*', async (c, next) => {
   c.header('Access-Control-Allow-Origin', '*');
@@ -27,7 +29,7 @@ Respond with ONLY valid JSON: {"evaluation_id":"string","timestamp":"ISO","agent
 app.post('/schedule/evaluate', async (c) => {
   try {
     const rawInput = await c.req.json();
-    const input = rawInput as JudgeInput;
+    const input = await runPreExecutionHooks(rawInput, 'Agent8') as JudgeInput;
     let lastErr: any;
     for (const model of MODELS) {
       try {
@@ -41,7 +43,8 @@ app.post('/schedule/evaluate', async (c) => {
           temperature: 0.1,
           response_format: { type: 'json_object' }
         });
-        const out = JSON.parse(result.choices[0]?.message?.content || '{}') as JudgeOutput;
+        let out = JSON.parse(result.choices[0]?.message?.content || '{}') as JudgeOutput;
+        out = await runPostExecutionHooks<JudgeOutput>(out, 'Agent8', 'JudgeOutput');
         console.log(`[Agent8] Evaluation complete: ${out.policy_violations_detected} violations, alert=${out.alert_fired}`);
         return c.json({ success: true, evaluation: out });
       } catch (e: any) { lastErr = e; console.warn(`[Agent8] ${model} failed: ${e.message?.slice(0,80)}`); }
