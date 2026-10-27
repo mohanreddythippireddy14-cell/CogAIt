@@ -1,0 +1,36 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      # No lockfiles are committed (package-lock.json is git-ignored), so install from package.json.
+      - name: Install (frontend + Convex)
+        run: npm install --no-audit --no-fund
+
+      - name: Install (agents)
+        run: npm install --no-audit --no-fund
+        working-directory: agents
+
+      - name: Typecheck (frontend, Convex, agents)
+        run: npm run typecheck
+
+      - name: Unit tests
+        run: npm test
+
+      - name: Runtime invariant suites
+        run: npm run validate:runtime
+
+      - name: Build frontend
+        run: npm run build

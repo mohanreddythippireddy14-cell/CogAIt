@@ -159,7 +159,7 @@ function AgentChatPanel({
   const conversation = useQuery(anyApi.agentConversation.getConversation, { assignmentId }) as {
     _id: Id<"agentConversations">;
     messages: Array<{ role: "agent" | "student"; content: string; timestamp: number }>;
-    status: "active" | "closed";
+    status: "analyzing" | "negotiating" | "searching" | "active" | "closed" | "failed";
   } | null | undefined;
 
   const startAnalysis = useAction(anyApi.agentConversation.startAnalysis);

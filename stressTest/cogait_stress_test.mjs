@@ -7,7 +7,12 @@
 
 import { ConvexHttpClient } from "convex/browser";
 
-const CONVEX_URL = "https://dynamic-alpaca-596.convex.cloud";
+// Point this at a TEST deployment: the suite signs up users and writes data.
+const CONVEX_URL = process.env.CONVEX_URL;
+if (!CONVEX_URL) {
+  console.error("Set CONVEX_URL to a test deployment, e.g. CONVEX_URL=https://<name>.convex.cloud node stressTest/cogait_stress_test.mjs");
+  process.exit(1);
+}
 
 const C = {
   reset:"\x1b[0m", red:"\x1b[31m", green:"\x1b[32m",
