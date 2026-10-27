@@ -31,7 +31,12 @@ export interface ProctoringSignal {
 export interface SocraticAgentInput {
   student_id: string;
   problem_id: string;
+  /** Question text/context, sent by Convex. */
+  problem_context?: string;
+  /** Recent turns of this question's tutoring conversation, oldest first. */
+  conversation?: Array<{ student: string; assistant: string }>;
   student_reasoning_input: string;
+  /** Current help level 1-4 (owned by Convex). */
   current_scaffolding_depth: number;
 }
 
@@ -39,6 +44,7 @@ export interface SocraticAgentOutput {
   socratic_question: string;
   scaffolding_depth_applied: number;
   reasoning_quality_signal: ReasoningQuality;
+  tokens_used?: number;
 }
 
 // ==========================================

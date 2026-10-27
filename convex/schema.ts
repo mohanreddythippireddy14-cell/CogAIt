@@ -226,6 +226,7 @@ const applicationTables = {
     assignmentId: v.optional(v.id("assignments")),
     studentId: v.optional(v.id("users")),
   }).index("by_attempt", ["attemptId"])
+    .index("by_student", ["studentId"])
     .index("by_organizationId", ["organizationId"])
     .index("by_org_and_assignment", ["organizationId", "assignmentId"]),
 

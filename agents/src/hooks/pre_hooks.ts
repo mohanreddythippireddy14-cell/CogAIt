@@ -43,10 +43,10 @@ function enforceAgentSpecificPreconditions(input: unknown, agentId: string): voi
   if (agentId === "Agent1") {
     const reasoning = String(record.student_reasoning_input ?? "").trim();
     if (reasoning.length < 15) {
-      throw new Error("[PreHook - Agent1] Student reasoning must be at least 15 characters.");
+      throw new Error("[PreHook - Agent1] Student reasoning must be at least 15 characters: describe how you are approaching the problem.");
     }
     if (guessingPatterns.some((pattern) => pattern.test(reasoning))) {
-      throw new Error("[PreHook - Agent1] Guessing-pattern input rejected.");
+      throw new Error("[PreHook - Agent1] Guessing-pattern input rejected: share what you have tried instead of asking for the answer.");
     }
   }
 
