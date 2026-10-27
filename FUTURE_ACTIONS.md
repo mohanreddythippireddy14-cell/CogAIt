@@ -6,8 +6,9 @@ Last reviewed: 2026-10-27.
 
 ## A. Do next (no extra resources needed)
 
-### A0. Configure and redeploy after the October 2026 cleanup · *needs: your Convex dev deployment* · **do first**
-The cleanup added a Convex index and new environment variables. Nothing was run against a live deployment.
+### A0. Right after merging PR #2 (October 2026 cleanup) · *needs: your Convex dev deployment* · **do first**
+The cleanup added a Convex index and new environment variables. It was typechecked, unit-tested and built (locally and in CI), but nothing was run against a live Convex deployment or Gemini. Until steps 1–3 are done, the agents cannot talk to Convex.
+0. Check that the CI badge on `main` is green (Actions tab → CI).
 1. `npx convex env set AGENT_SECRET <random-string>` and put the same value in `agents/.env` (`AGENT_SECRET=`). Without it, every agent-facing Convex function refuses calls.
 2. `npx convex env set GOOGLE_API_KEY <key>` if not set already. Then copy `agents/.env.example` to `agents/.env` and set `CONVEX_URL` and `GOOGLE_API_KEY`.
 3. `npm run convex:check` (`npx convex dev --once`). This pushes the new `aiInteractions.by_student` index and the changed functions.
