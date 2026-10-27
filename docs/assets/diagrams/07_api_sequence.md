@@ -1,23 +1,17 @@
-# API Sequence (Gemini Proxy)
+# API Sequence (Gemini proxy for agents)
+
+The Convex route `/api/gemini-proxy/openai/v1/chat/completions` (`convex/geminiProxy.ts`) is a
+plain pass-through. It does **not** apply rate limits or cost governance; the limits apply to the
+student tutor inside Convex: the per-student help limit (`convex/application/aiService.ts`) and the flagged, off-by-default org limit and cost governance.
 
 ```mermaid
 sequenceDiagram
-    participant A as Autonomous Agent
-    participant P as Convex Gemini Proxy (HTTP)
-    participant C as Convex DB (Policies)
-    participant G as Google Gemini API
+    participant A as Agent service
+    participant P as Convex HTTP route (gemini-proxy)
+    participant G as Gemini OpenAI-compatible API
 
-    A->>P: POST /api/gemini-proxy/openai/v1/chat/completions
-    P->>C: Check rate limits & Cost Governance
-    
-    alt Limits Exceeded
-        C-->>P: Deny Request
-        P-->>A: 429 Too Many Requests
-    else Allowed
-        P->>G: Forward Chat Completion Request
-        G-->>P: Respond with JSON Completion
-        
-        P->>C: Record AI Usage (tokens, cost)
-        P-->>A: 200 OK (JSON response)
-    end
+    A->>P: POST /api/gemini-proxy/openai/v1/chat/completions<br/>Authorization: Bearer GOOGLE_API_KEY
+    P->>G: Forward body and Authorization header
+    G-->>P: Chat completion (JSON)
+    P-->>A: Same status and body
 ```

@@ -16,28 +16,7 @@ export const VIOLATION_LIMITS = {
   autoSubmitViolations: 5,
 } as const;
 
-export const COGNITIVE_WEIGHTS = {
-  correctness: 0.4,
-  independence: 0.3,
-  timeEfficiency: 0.2,
-  thinkingTime: 0.1,
-} as const;
-
-export const DIFFICULTY_MULTIPLIERS = {
-  easy: 0.8,
-  medium: 1.0,
-  hard: 1.2,
-} as const;
-
-export const TIME_EXPECTATIONS = {
-  secondsPerQuestion: 240, // 4 minutes
-} as const;
-
-export const INDEPENDENCE_FORMULA = {
-  maxHelpLevel: 4,
-  questionBonus: 50,
-  helpBonus: 50,
-} as const;
+// Score formulas (independence, CIS_v1, cognitive score) live in domain/scoring.ts.
 
 // Guardrail contracts for dashboard rollups and API responses.
 export const METRIC_CONTRACTS = {

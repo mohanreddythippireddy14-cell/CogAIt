@@ -1,4 +1,5 @@
-import Groq from "groq-sdk";
+import { getModel, llm, parseJsonReply } from "../lib/llm.js";
+import { withRetries } from "../lib/retry.js";
 import { validateSchema } from "../guardrails/schema_validator.js";
 
 function enforceDeterministicPolicies<T>(validated: T, agentId: string): void {
@@ -17,7 +18,6 @@ async function runLlmJudge(agentId: string, output: unknown): Promise<void> {
   if (!process.env.GOOGLE_API_KEY) return;
 
   const outputStr = typeof output === "string" ? output : JSON.stringify(output);
-  const groq = new Groq({ apiKey: process.env.GOOGLE_API_KEY, baseURL: process.env.CONVEX_URL?.replace(".cloud", ".site") + "/api/gemini-proxy/" || "https://dynamic-alpaca-596.convex.site/api/gemini-proxy/" });
 
   let judgePrompt: string | null = null;
 
@@ -33,35 +33,35 @@ Respond ONLY with valid JSON: {"passed": boolean, "reason": "string"}.`;
 
   if (!judgePrompt) return;
 
-  let retries = 3;
-  while (retries > 0) {
-    try {
-      const evaluation = await groq.chat.completions.create({
-        model: (process.env.GEMINI_MODEL || "gemini-3.8-flash"),
-        messages: [
-          { role: "system", content: judgePrompt },
-          { role: "user", content: `Agent: ${agentId}\nOutput: ${outputStr}` },
-        ],
-        temperature: 0.1,
-        response_format: { type: "json_object" },
-      });
-
-      const result = JSON.parse(evaluation.choices[0]?.message?.content || '{"passed":true,"reason":"ok"}');
-      if (!result.passed) {
-        throw new Error(`[PolicyException] ${result.reason}`);
-      }
-      return; // Success, return early
-    } catch (err: any) {
-      if (String(err.message).includes("[PolicyException]")) throw err;
-      
-      if (process.env.MOCK_LLM === 'true') {
-        console.warn(`[PolicyException Mock] LLM Judge service unavailable, allowing output: ${err.message}`);
-        console.warn(`[PolicyException Mock] LLM Judge service unavailable, allowing output: ${err.message}`);
-        return;
-      }
-      
-      throw new Error(`[PolicyException] LLM Judge service unavailable or timed out: ${err.message}`);
+  try {
+    const result = await withRetries(
+      async () => {
+        const evaluation = await llm().chat.completions.create({
+          model: getModel(),
+          messages: [
+            { role: "system", content: judgePrompt as string },
+            { role: "user", content: `Agent: ${agentId}
+Output: ${outputStr}` },
+          ],
+          temperature: 0.1,
+          response_format: { type: "json_object" },
+        });
+        return parseJsonReply<{ passed: boolean; reason: string }>(evaluation.choices[0]?.message?.content);
+      },
+      { attempts: 3 },
+    );
+    if (!result.passed) {
+      throw new Error(`[PolicyException] ${result.reason}`);
     }
+  } catch (err: any) {
+    if (String(err.message).includes("[PolicyException]") && !String(err.message).includes("unavailable")) throw err;
+
+    if (process.env.MOCK_LLM === "true") {
+      console.warn(`[PolicyException Mock] LLM Judge service unavailable, allowing output: ${err.message}`);
+      return;
+    }
+
+    throw new Error(`[PolicyException] LLM Judge service unavailable or timed out: ${err.message}`);
   }
 }
 

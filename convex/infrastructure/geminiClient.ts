@@ -1,5 +1,8 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
 
+/** Default model for every Gemini call; override with the GEMINI_MODEL env var. */
+export const DEFAULT_GEMINI_MODEL = "gemini-3.5-flash";
+
 if (!process.env.GOOGLE_API_KEY) {
   throw new Error("Missing GOOGLE_API_KEY environment variable");
 }

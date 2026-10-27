@@ -14,6 +14,7 @@ dist-ssr
 .env
 .env.local
 .env.*
+!.env.example
 
 # Editor directories and files
 .vscode/*
@@ -31,3 +32,22 @@ package-lock.json
 
 # Large artifacts
 *.zip
+
+# Build output and scratch folders (kept out of the repo; see git history)
+dist-validation*/
+.tmp_sim/
+tmp_pdf/
+ui_export_unpacked/
+_ui_replacement/
+
+# Agent runtime memory (written by agents/src/memory/file_store.ts)
+agents/.memory/
+
+# One-off local payloads and scripts
+payload.json
+agents/payload.json
+agents/test.js
+agents/test_guardrail.ts
+agents/fix_*.mjs
+spatial_ui.html
+public/spatial_ar.html

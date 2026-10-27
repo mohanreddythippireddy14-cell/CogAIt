@@ -1,14 +1,22 @@
 // Tools for Agent 5 (Assignment Creator)
-import { convex } from '../memory/convex_client.js';
+import { createDraftAssignment } from '../memory/convex_client.js';
+import type { AssignmentCreatorInput, AssignmentCreatorOutput, Subject } from '../types/index.js';
+
+const SUBJECTS: Subject[] = ['Physics', 'Chemistry', 'Math'];
+
+/** Maps free-text subject names to the schema's subject values. */
+export function normalizeSubject(value: unknown): Subject | undefined {
+  const text = String(value ?? '').trim().toLowerCase();
+  if (!text) return undefined;
+  if (text.startsWith('phys')) return 'Physics';
+  if (text.startsWith('chem')) return 'Chemistry';
+  if (text.startsWith('math')) return 'Math';
+  return SUBJECTS.find((subject) => subject.toLowerCase() === text);
+}
 
 export const documentAiOutputParser = (rawText: string): string => {
   console.log(`[DocAIParser] Parsing raw OCR text... (${rawText.length} chars)`);
   return rawText.trim();
-};
-
-export const topicTaxonomyMapper = async (content: string): Promise<string> => {
-  console.log(`[TaxonomyMapper] Mapping content to CogAIt taxonomy...`);
-  return "mapped_taxonomy_term"; // Simulated
 };
 
 function ensureStringArray(value: unknown): string[] | undefined {
@@ -55,6 +63,7 @@ export const jsonFormatter = (data: any): any => {
                   ? question.answer.trim()
                   : undefined,
             mapped_topic: String(mappedTopic).trim() || `topic_${index + 1}`,
+            subject: normalizeSubject(question?.subject),
           };
         })
         .filter(Boolean)
@@ -81,6 +90,21 @@ export const jsonFormatter = (data: any): any => {
   };
 };
 
-export const convexWriteAssignment = async (lecturerId: string, payload: any): Promise<void> => {
-  console.log(`[ConvexWriteAssignment] Stored generated assignment for lecturer ${lecturerId}`);
+/** Stores the questions as an unpublished draft assignment; returns its Convex id. */
+export const convexWriteAssignment = async (
+  input: AssignmentCreatorInput,
+  output: AssignmentCreatorOutput,
+): Promise<string> => {
+  return createDraftAssignment({
+    lecturerId: input.lecturer_id,
+    title: input.source_filename.replace(/\.[a-z0-9]+$/i, ''),
+    defaultSubject: input.subject ?? 'Physics',
+    questions: output.questions.map((question) => ({
+      text: question.text,
+      options: question.options,
+      correctAnswer: question.correct_answer,
+      topic: question.mapped_topic,
+      subject: question.subject,
+    })),
+  });
 };

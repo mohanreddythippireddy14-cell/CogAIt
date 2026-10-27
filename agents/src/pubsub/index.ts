@@ -1,48 +1,54 @@
-const TOPIC_PORT_MAPPING: Record<string, number> = {
-  'session_ended': 8082,          // Agent 2 (Analyst)
-  'weak_topics_identified': 8089, // Negotiation Node
-  'remediation_offer_ready': 8089, // Negotiation Node/Web UI signal bridge
-  'remediation_requested': 8083,  // Agent 3 (Content)
-  'remediation_declined': 8089,   // Negotiation Node/audit
-  'session_record_written': 8084, // Agent 4 (Long-Term Analyst)
-  'student_report_ready': 8086,   // Agent 6 (Cohort Analyst)
-  'cohort_intelligence_ready': 8087,// Agent 7 (Recommendation)
-  'document_uploaded': 8085,      // Agent 5 (Ingestion)
-  'schema_validation_failed': 8088 // Agent 8 (Judge)
+import { agentKeyHeaders } from '../middleware/auth.js';
+
+/**
+ * Lightweight event bus: each topic is delivered as an authenticated HTTP POST to the
+ * service that consumes it (fire-and-forget). It stands in for Google Cloud Pub/Sub.
+ *
+ * Locally every service runs on localhost with its default port. When services run
+ * elsewhere (e.g. Cloud Run), set the service's base URL, e.g. AGENT6_URL=https://....
+ */
+interface Route {
+  service: string; // env var prefix: <service>_URL
+  defaultPort: number;
+  endpoint: string;
+}
+
+export const TOPIC_ROUTES: Record<string, Route> = {
+  session_ended: { service: 'AGENT2', defaultPort: 8082, endpoint: '/webhook/session_ended' },
+  weak_topics_identified: { service: 'NEGOTIATION', defaultPort: 8089, endpoint: '/webhook/weak_topics_identified' },
+  remediation_offer_ready: { service: 'NEGOTIATION', defaultPort: 8089, endpoint: '/webhook/remediation_offer_ready' },
+  remediation_declined: { service: 'NEGOTIATION', defaultPort: 8089, endpoint: '/webhook/remediation_declined' },
+  remediation_postponed: { service: 'NEGOTIATION', defaultPort: 8089, endpoint: '/webhook/remediation_postponed' },
+  remediation_requested: { service: 'AGENT3', defaultPort: 8083, endpoint: '/webhook/remediation_requested' },
+  session_record_written: { service: 'AGENT4', defaultPort: 8084, endpoint: '/task/longterm_analysis' },
+  document_uploaded: { service: 'AGENT5', defaultPort: 8085, endpoint: '/webhook/document_uploaded' },
+  student_report_ready: { service: 'AGENT6', defaultPort: 8086, endpoint: '/webhook/student_report_ready' },
+  cohort_intelligence_ready: { service: 'AGENT7', defaultPort: 8087, endpoint: '/workflow/recommendation_generation' },
+  agent_output_produced: { service: 'AGENT8', defaultPort: 8088, endpoint: '/judge/output' },
+  schema_validation_failed: { service: 'AGENT8', defaultPort: 8088, endpoint: '/schedule/evaluate' },
 };
 
-const ENDPOINT_MAP: Record<string, string> = {
-  'session_ended': '/webhook/session_ended',
-  'weak_topics_identified': '/webhook/weak_topics_identified', // routed to negotiation node
-  'remediation_offer_ready': '/webhook/remediation_offer_ready',
-  'remediation_requested': '/webhook/remediation_requested', // routed to agent 3
-  'remediation_declined': '/webhook/remediation_declined',
-  'session_record_written': '/task/longterm_analysis',
-  'student_report_ready': '/workflow/cohort_analysis',
-  'cohort_intelligence_ready': '/workflow/recommendation_generation',
-  'document_uploaded': '/webhook/document_uploaded',
-  'schema_validation_failed': '/schedule/evaluate'
-};
+export function resolveTopicUrl(topicName: string, env: NodeJS.ProcessEnv = process.env): string | null {
+  const route = TOPIC_ROUTES[topicName];
+  if (!route) return null;
+  const base = (env[`${route.service}_URL`] || `http://localhost:${route.defaultPort}`).replace(/\/$/, '');
+  return `${base}${route.endpoint}`;
+}
 
 export const publishEvent = async (topicName: string, data: any) => {
-  console.log(`[PubSub Mock] Emitting event to ${topicName}`);
-  
-  const port = TOPIC_PORT_MAPPING[topicName];
-  const endpoint = ENDPOINT_MAP[topicName];
-
-  if (!port || !endpoint) {
-    console.warn(`[PubSub Mock] No port mapped for topic ${topicName}`);
+  const url = resolveTopicUrl(topicName);
+  if (!url) {
+    console.warn(`[PubSub] No route for topic ${topicName}`);
     return;
   }
+  console.log(`[PubSub] Emitting ${topicName} -> ${url}`);
 
-  // Simulate fire-and-forget decoupled messaging
+  // Fire-and-forget: the publisher never waits for the consumer.
   setTimeout(() => {
-    fetch(`http://localhost:${port}${endpoint}`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(data)
-    }).catch(err => {
-      console.error(`[PubSub Mock] Delivery to ${topicName} failed: ${err.message}`);
-    });
-  }, 100); // 100ms async delay
+    fetch(url, { method: 'POST', headers: agentKeyHeaders(), body: JSON.stringify(data) })
+      .then((res) => {
+        if (!res.ok) console.error(`[PubSub] ${topicName} delivery returned ${res.status}`);
+      })
+      .catch((err) => console.error(`[PubSub] Delivery to ${topicName} failed: ${err.message}`));
+  }, 100);
 };

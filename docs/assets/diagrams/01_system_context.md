@@ -4,16 +4,16 @@
 C4Context
     title System Context for CogAIt
 
-    Person(student, "Student", "A JEE/NEET aspirant seeking to improve problem-solving skills.")
-    Person(lecturer, "Lecturer", "Creates assignments, reviews analytics, tracks class performance.")
-    
-    System(cogait, "CogAIt Platform", "An agentic AI learning platform that provides Socratic tutoring and tracks cognitive reasoning.")
+    Person(student, "Student", "A JEE/NEET aspirant practising problems with a Socratic tutor.")
+    Person(lecturer, "Lecturer", "Creates assignments, reviews analytics and briefings.")
 
-    System_Ext(gemini, "Google Gemini", "Generative AI models for reasoning and text generation.")
-    System_Ext(groq, "Groq Cloud", "Fast inference API used by some specialized agents.")
+    System(cogait, "CogAIt Platform", "React app, Convex backend and agent services.")
 
-    Rel(student, cogait, "Takes assignments, receives Socratic help, views analytics", "HTTPS")
-    Rel(lecturer, cogait, "Creates assignments, views class dashboards, approves remediations", "HTTPS")
-    Rel(cogait, gemini, "Sends prompts for content generation and student reasoning analysis", "HTTPS/API")
-    Rel(cogait, groq, "Executes specific agent tasks", "HTTPS/API")
+    System_Ext(gemini, "Google Gemini", "LLM for tutor replies, assignment generation and agent analysis (default gemini-3.5-flash).")
+    System_Ext(resend, "Resend", "Optional email notifications.")
+
+    Rel(student, cogait, "Takes assignments, asks for help, views results", "HTTPS")
+    Rel(lecturer, cogait, "Creates assignments, views dashboards and briefings", "HTTPS")
+    Rel(cogait, gemini, "Prompts (Convex SDK calls; agents via the Convex proxy route)", "HTTPS")
+    Rel(cogait, resend, "Sends assignment notifications", "HTTPS")
 ```

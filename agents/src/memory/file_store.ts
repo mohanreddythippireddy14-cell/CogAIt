@@ -12,7 +12,10 @@ export async function ensureDirectory(dirPath: string): Promise<void> {
 }
 
 export function sanitizeKey(value: string): string {
-  return value.replace(/[^a-zA-Z0-9_-]/g, "_");
+  // Keep a trailing .json extension; everything else outside [a-zA-Z0-9_-] becomes "_".
+  const extension = value.endsWith(".json") ? ".json" : "";
+  const base = extension ? value.slice(0, -extension.length) : value;
+  return base.replace(/[^a-zA-Z0-9_-]/g, "_") + extension;
 }
 
 export async function readJsonFile<T>(filePath: string, fallback: T): Promise<T> {

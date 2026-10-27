@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { useQuery } from "convex/react";
+import { useAuthToken } from "@convex-dev/auth/react";
 import { api } from "../../convex/_generated/api";
+import { agentHeaders } from "../lib/agentFetch";
 import { Id } from "../../convex/_generated/dataModel";
 import { Clock, X } from "lucide-react";
 import { toast } from "sonner";
@@ -53,6 +55,7 @@ export function RemediationConsent({ assignmentId, studentId, agentBaseUrl }: Re
   const [dismissedOfferId, setDismissedOfferId] = useState<string | null>(null);
   const [remainingMs, setRemainingMs] = useState(0);
   const [submitting, setSubmitting] = useState(false);
+  const authToken = useAuthToken();
 
   const activeOffer = useMemo(() => {
     if (!pendingOffers || pendingOffers.length === 0) return null;
@@ -89,7 +92,7 @@ export function RemediationConsent({ assignmentId, studentId, agentBaseUrl }: Re
     try {
       const response = await fetch(`${agentBaseUrl}/agent-negotiation/negotiation/respond`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: agentHeaders(authToken),
         body: JSON.stringify({
           pending_remediation_id: String(activeOffer._id),
           student_id: studentId,

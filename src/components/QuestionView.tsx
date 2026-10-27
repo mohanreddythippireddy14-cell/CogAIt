@@ -1,7 +1,9 @@
 import { useState, useEffect, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useAction, useConvex } from "convex/react";
+import { useAuthToken } from "@convex-dev/auth/react";
 import { api } from "../../convex/_generated/api";
+import { agentHeaders } from "../lib/agentFetch";
 import { Id } from "../../convex/_generated/dataModel";
 import { LEVEL_NAMES } from "../../convex/constants";
 import { MathRenderer } from "./MathRenderer";
@@ -71,10 +73,9 @@ export function QuestionView() {
   const startAttempt = useMutation(api.attempts.startAttempt);
   const saveAttemptDraft = useMutation(api.attempts.saveAttemptDraft);
   const submitAttempt = useMutation(api.attempts.submitAttempt);
-  const storeAgentInteraction = useMutation(api.ai.storeInteraction);
-  const updateHelpStats = useMutation(api.attempts.updateHelpStats);
   const convex = useConvex();
   const AGENT_BASE_URL = import.meta.env.VITE_AGENT_URL || "";
+  const authToken = useAuthToken();
   const sendImageFeedback = useAction(api.ai.sendImageFeedback);
   const sendChatMessageAction = useAction(api.ai.sendChatMessage);
   const recordViolation = useMutation(api.attempts.recordViolation);
@@ -517,7 +518,7 @@ export function QuestionView() {
         // Fire-and-forget to Agent 2 — do NOT await, just dispatch
         fetch(`${AGENT_BASE_URL}/agent2/webhook/session_ended`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: agentHeaders(authToken),
           body: JSON.stringify({
             student_id: user?.userId ?? attemptId,
             assignment_id: assignmentId,

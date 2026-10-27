@@ -7,6 +7,7 @@ import {
   sweepExpiredRemediations,
 } from "../middleware/negotiation_node.js";
 import type { AssignmentAnalystOutput } from "../types/index.js";
+import { getAgentSecret } from "../middleware/auth.js";
 
 type EmittedEvent = { topic: string; payload: unknown };
 type RemediationPreference = "pyqs" | "fundamentals" | "theory" | "all";
@@ -66,6 +67,7 @@ function assertNoEvent(topic: string): void {
  */
 async function listAwaitingForStudent(studentId: string, assignmentId: string) {
   const rows = (await convex.query("pendingRemediations:listAwaiting" as never, {
+    agentKey: getAgentSecret(),
     student_id: studentId,
     assignment_id: assignmentId,
   } as never)) as Array<{
@@ -85,6 +87,7 @@ async function listAwaitingForStudent(studentId: string, assignmentId: string) {
  */
 async function getPendingById(pendingId: string) {
   const row = (await convex.query("pendingRemediations:getById" as never, {
+    agentKey: getAgentSecret(),
     pending_remediation_id: pendingId,
   } as never)) as
     | {
@@ -106,6 +109,7 @@ async function getPendingById(pendingId: string) {
  */
 async function forceExpiry(pendingId: string, expiresAt: number): Promise<void> {
   await convex.mutation("pendingRemediations:updateExpiry" as never, {
+    agentKey: getAgentSecret(),
     pending_remediation_id: pendingId,
     expires_at: expiresAt,
   } as never);

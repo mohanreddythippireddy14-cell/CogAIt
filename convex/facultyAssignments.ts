@@ -3,7 +3,7 @@ import { v } from "convex/values";
 import { api, internal } from "./_generated/api";
 import { Id } from "./_generated/dataModel";
 import { requireRole, requireRoleFromAction } from "./lib/authGuards";
-import { generateMultimodalWithFallback, generateTextWithFallback } from "./infrastructure/geminiClient";
+import { DEFAULT_GEMINI_MODEL, generateMultimodalWithFallback, generateTextWithFallback } from "./infrastructure/geminiClient";
 import { validateDraftInput } from "./application/facultyDraftService";
 import { requireSameOrganization } from "./infrastructure/organizationGuard";
 import { logEvent } from "./infrastructure/logger";
@@ -290,7 +290,7 @@ async function callGeminiWithFallback(
   mimeType?: string,
   dataBase64?: string,
 ): Promise<string> {
-  const candidateModels = [(process.env.GEMINI_MODEL || "gemini-3.5-flash")];
+  const candidateModels = [process.env.GEMINI_MODEL || DEFAULT_GEMINI_MODEL];
   if (mimeType && dataBase64) {
     const result = await generateMultimodalWithFallback({
       promptParts: [
@@ -1868,11 +1868,12 @@ export const updateAssignmentAiStatusInternal = internalMutation({
   },
 });
 
-export const testGemini = action({
+// Dev helper: internal so it cannot be called by clients (it spends Gemini quota).
+export const testGemini = internalAction({
   args: {},
   returns: v.string(),
   handler: async () => {
-    const text = await callGemini("gemini-2.5-pro", 'Say "HELLO" only.');
+    const text = await callGemini(process.env.GEMINI_MODEL || DEFAULT_GEMINI_MODEL, 'Say "HELLO" only.');
     console.log("[facultyAssignments] testGemini response", { text });
     return text;
   },

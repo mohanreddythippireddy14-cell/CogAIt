@@ -25,6 +25,7 @@ import { v } from "convex/values";
 import { api } from "./_generated/api";
 import { requireAuthWithProfile, requireAuthFromAction } from "./lib/authGuards";
 import { requireSameOrganization } from "./infrastructure/organizationGuard";
+import { agentKeyArg, requireAgentKey } from "./lib/agentAuth";
 
 const messageValidator = v.object({
   role: v.union(v.literal("agent"), v.literal("student")),
@@ -43,7 +44,7 @@ export const getConversation = query({
     v.object({
       _id: v.id("agentConversations"),
       messages: v.array(messageValidator),
-      status: v.union(v.literal("analyzing"), v.literal("negotiating"), v.literal("searching"), v.literal("active"), v.literal("closed")),
+      status: v.union(v.literal("analyzing"), v.literal("negotiating"), v.literal("searching"), v.literal("active"), v.literal("closed"), v.literal("failed")),
       deepDiveRequested: v.boolean(),
     }),
     v.null(),
@@ -127,10 +128,14 @@ export const appendMessage = mutation({
   },
   returns: v.null(),
   handler: async (ctx, args) => {
-    const { profile } = await requireAuthWithProfile(ctx);
+    const { userId, profile } = await requireAuthWithProfile(ctx);
     const convo = await ctx.db.get(args.conversationId);
     if (!convo) throw new Error("Conversation not found");
     requireSameOrganization(convo.organizationId, profile.organizationId);
+    // Agent messages are written by the agent services (appendAgentMessage), never by users.
+    if (convo.studentId !== userId || args.role !== "student") {
+      throw new Error("Students can only post their own messages");
+    }
 
     // Idempotency check for student messages
     if (args.messageId) {
@@ -151,31 +156,44 @@ export const appendMessage = mutation({
 
 export const getOrCreateConversation = mutation({
   args: {
+    ...agentKeyArg,
     assignmentId: v.id("assignments"),
     studentId: v.id("users"),
+    weakTopics: v.optional(v.array(v.string())),
   },
   returns: v.id("agentConversations"),
   handler: async (ctx, args) => {
+    requireAgentKey(args.agentKey);
+    // The organization lives on the user's profile, not on the users table.
+    const profile = await ctx.db
+      .query("userProfiles")
+      .withIndex("by_user", (q) => q.eq("userId", args.studentId))
+      .first();
+    if (!profile) throw new Error("Student profile not found");
+
     const existing = await ctx.db
       .query("agentConversations")
       .withIndex("by_org_student_assignment", (q) =>
-        q.eq("studentId", args.studentId).eq("assignmentId", args.assignmentId)
+        q
+          .eq("organizationId", profile.organizationId)
+          .eq("studentId", args.studentId)
+          .eq("assignmentId", args.assignmentId),
       )
       .first();
 
-    if (existing) return existing._id;
-
-    // Get org id from student
-    const student = await ctx.db.get(args.studentId);
-    if (!student) throw new Error("Student not found");
+    if (existing) {
+      if (args.weakTopics) await ctx.db.patch(existing._id, { weakTopics: args.weakTopics });
+      return existing._id;
+    }
 
     return await ctx.db.insert("agentConversations", {
-      organizationId: student.organizationId,
+      organizationId: profile.organizationId,
       studentId: args.studentId,
       assignmentId: args.assignmentId,
       messages: [],
       status: "analyzing",
       deepDiveRequested: false,
+      weakTopics: args.weakTopics,
       createdAt: Date.now(),
     });
   },
@@ -183,6 +201,7 @@ export const getOrCreateConversation = mutation({
 
 export const appendAgentMessage = mutation({
   args: {
+    ...agentKeyArg,
     conversationId: v.id("agentConversations"),
     content: v.string(),
     newStatus: v.optional(v.union(v.literal("analyzing"), v.literal("negotiating"), v.literal("searching"), v.literal("active"), v.literal("closed"))),
@@ -190,7 +209,7 @@ export const appendAgentMessage = mutation({
   },
   returns: v.null(),
   handler: async (ctx, args) => {
-    // Internal mutation for backend agents via webhook (no auth guard)
+    requireAgentKey(args.agentKey);
     const convo = await ctx.db.get(args.conversationId);
     if (!convo) throw new Error("Conversation not found");
 
@@ -216,11 +235,13 @@ export const appendAgentMessage = mutation({
 
 export const updateStatus = mutation({
   args: {
+    ...agentKeyArg,
     conversationId: v.id("agentConversations"),
     status: v.union(v.literal("analyzing"), v.literal("negotiating"), v.literal("searching"), v.literal("active"), v.literal("closed")),
   },
   returns: v.null(),
   handler: async (ctx, args) => {
+    requireAgentKey(args.agentKey);
     const convo = await ctx.db.get(args.conversationId);
     if (!convo) throw new Error("Conversation not found");
     await ctx.db.patch(args.conversationId, { status: args.status });
@@ -229,9 +250,10 @@ export const updateStatus = mutation({
 });
 
 export const getConversationInternal = query({
-  args: { conversationId: v.id("agentConversations") },
+  args: { ...agentKeyArg, conversationId: v.id("agentConversations") },
   returns: v.any(),
   handler: async (ctx, args) => {
+    requireAgentKey(args.agentKey);
     return await ctx.db.get(args.conversationId);
   },
 });

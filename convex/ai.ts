@@ -1,10 +1,11 @@
-import { action, mutation, query } from "./_generated/server";
+import { action, internalMutation, mutation, query } from "./_generated/server";
 import { v } from "convex/values";
 import { api, internal } from "./_generated/api";
 import { HELP_LEVELS } from "./constants";
 import { requireAuthFromAction, requireAuthWithProfile } from "./lib/authGuards";
 import { requireSameOrganization } from "./infrastructure/organizationGuard";
-import { generateMultimodalWithFallback, generateTextWithFallback } from "./infrastructure/geminiClient";
+import { generateMultimodalWithFallback, generateTextWithFallback, DEFAULT_GEMINI_MODEL } from "./infrastructure/geminiClient";
+import { Agent1RejectedError, askAgent1 } from "./infrastructure/agent1Client";
 import {
   getAiFallbackResponse,
   getIntermediateCalculationsUsed,
@@ -230,7 +231,7 @@ export const sendChatMessage = action({
     responseTime: v.number(),
   }),
   handler: async (ctx, args) => {
-    const userId = await requireAuthFromAction(ctx);
+    const { userId } = await requireAuthFromAction(ctx);
 
     const history = await ctx.runQuery(api.ai.getConversationHistory, {
       attemptId: args.attemptId,
@@ -258,11 +259,8 @@ export const sendChatMessage = action({
     }
     // AI levels are managed autonomously by the Socratic Agent now, bypassing manual UI rollout restrictions.
 
-    const recentHelp = await ctx.runQuery(api.ai.getRecentHelpRequests, {
-      attemptId: args.attemptId,
-    });
-    const now = Date.now();
-    enforceHelpRequestPolicy({ recentHelp, now });
+    const recentHelp = await ctx.runQuery(api.ai.getRecentHelpRequests, {});
+    enforceHelpRequestPolicy({ recentHelp, now: Date.now() });
 
     const intermediateCalculationsUsed = getIntermediateCalculationsUsed(history);
     const conversationTurnCount = history.length + 1;
@@ -302,32 +300,55 @@ export const sendChatMessage = action({
       const promptVersion = isFeatureEnabled("promptVersioning", attempt.organizationId)
         ? "cogait_v1"
         : "legacy";
-      let { text: aiResponse, totalTokenCount: tokensUsed } = await generateTextWithFallback({
-        prompt: conversationText,
-        candidateModels: [(process.env.GEMINI_MODEL || "gemini-3.5-flash")],
-        temperature: activeHelpLevel <= 2 ? 0.7 : 0.8,
-        maxOutputTokens: getMaxTokens(activeHelpLevel),
-        retryQuotaOnce: true,
-        onUsage: ({ model }) => {
-          modelUsed = model;
-        },
-      });
 
-      let responseText = aiResponse;
-      let effectiveHelpLevel = activeHelpLevel;
-      const parsed = parseJsonObject(aiResponse);
-      if (parsed && typeof parsed.response === "string" && typeof parsed.new_level === "number") {
-        responseText = parsed.response;
-        effectiveHelpLevel = Math.max(1, Math.min(4, Math.round(parsed.new_level as number))) as (typeof HELP_LEVELS)[number];
+      let responseText: string;
+      let tokensUsed: number;
+      let effectiveHelpLevel: (typeof HELP_LEVELS)[number] = activeHelpLevel;
+
+      // Agent 1 (Socratic agent) writes the reply when AGENT1_URL is configured; otherwise,
+      // or if it is unreachable, the tutor calls Gemini directly with the same rules.
+      const agentReply = await askAgent1({
+        studentId: userId,
+        problemId: args.questionId,
+        problemContext: questionContext.structured,
+        conversation: history.slice(-6).map((interaction) => ({
+          student: interaction.studentInput,
+          assistant: interaction.aiResponse,
+        })),
+        studentInput: args.studentInput,
+        currentLevel: activeHelpLevel,
+      });
+      if (agentReply) {
+        responseText = agentReply.socraticQuestion;
+        tokensUsed = agentReply.tokensUsed;
+        effectiveHelpLevel = agentReply.scaffoldingDepth as (typeof HELP_LEVELS)[number];
+        modelUsed = "agent1_socratic";
       } else {
-        responseText = aiResponse.replace(/```json/g, '').replace(/```/g, '').trim();
+        const generated = await generateTextWithFallback({
+          prompt: conversationText,
+          candidateModels: [process.env.GEMINI_MODEL || DEFAULT_GEMINI_MODEL],
+          temperature: activeHelpLevel <= 2 ? 0.7 : 0.8,
+          maxOutputTokens: getMaxTokens(activeHelpLevel),
+          retryQuotaOnce: true,
+          onUsage: ({ model }) => {
+            modelUsed = model;
+          },
+        });
+        tokensUsed = generated.totalTokenCount;
+        const parsed = parseJsonObject(generated.text);
+        if (parsed && typeof parsed.response === "string" && typeof parsed.new_level === "number") {
+          responseText = parsed.response;
+          effectiveHelpLevel = Math.max(1, Math.min(4, Math.round(parsed.new_level as number))) as (typeof HELP_LEVELS)[number];
+        } else {
+          responseText = generated.text.replace(/```json/g, '').replace(/```/g, '').trim();
+        }
       }
 
       let validation = validateAiResponse(responseText, effectiveHelpLevel);
       let regenerationAttempts = 0;
       while (!validation.valid && regenerationAttempts < RESPONSE_REGENERATION_LIMIT) {
         regenerationAttempts += 1;
-        await ctx.runMutation(api.ai.logAiViolation, {
+        await ctx.runMutation(internal.ai.logAiViolation, {
           attemptId: args.attemptId,
           helpLevel: activeHelpLevel,
           violations: validation.violations,
@@ -343,7 +364,7 @@ export const sendChatMessage = action({
         );
         const regenerated = await generateTextWithFallback({
           prompt: retryPrompt,
-          candidateModels: [(process.env.GEMINI_MODEL || "gemini-3.5-flash")],
+          candidateModels: [process.env.GEMINI_MODEL || DEFAULT_GEMINI_MODEL],
           temperature: 0.5,
           maxOutputTokens: getMaxTokens(activeHelpLevel),
           retryQuotaOnce: true,
@@ -362,7 +383,7 @@ export const sendChatMessage = action({
         validation = validateAiResponse(responseText, effectiveHelpLevel);
       }
       if (!validation.valid) {
-        await ctx.runMutation(api.ai.logAiViolation, {
+        await ctx.runMutation(internal.ai.logAiViolation, {
           attemptId: args.attemptId,
           helpLevel: effectiveHelpLevel,
           violations: validation.violations,
@@ -380,7 +401,7 @@ export const sendChatMessage = action({
 
       const responseTime = Date.now() - startTime;
 
-      await ctx.runMutation(api.ai.storeInteraction, {
+      await ctx.runMutation(internal.ai.storeInteraction, {
         attemptId: args.attemptId,
         helpLevel: effectiveHelpLevel,
         studentInput: args.studentInput,
@@ -389,7 +410,7 @@ export const sendChatMessage = action({
         responseTimeMs: responseTime,
       });
       if (isFeatureEnabled("aiUsageMetrics", attempt.organizationId)) {
-        await ctx.runMutation(api.ai.logAiUsageMetric, {
+        await ctx.runMutation(internal.ai.logAiUsageMetric, {
           assignmentId: question.assignmentId,
           tokensUsed,
           model: modelUsed,
@@ -399,7 +420,7 @@ export const sendChatMessage = action({
         tokensUsed,
       });
       if (isFeatureEnabled("promptVersioning", attempt.organizationId)) {
-        await ctx.runMutation((api as any).ai.logPromptVersionEvent, {
+        await ctx.runMutation(internal.ai.logPromptVersionEvent, {
           assignmentId: question.assignmentId,
           attemptId: args.attemptId,
           promptVersion,
@@ -408,9 +429,9 @@ export const sendChatMessage = action({
         });
       }
 
-      await ctx.runMutation(api.attempts.updateHelpStats, {
+      await ctx.runMutation(internal.attempts.updateHelpStats, {
         attemptId: args.attemptId,
-        helpLevel: activeHelpLevel,
+        helpLevel: effectiveHelpLevel,
         reasoningChars: reasoningText.length,
         reasoningTextSnapshot: attempt.studentReasoning,
       });
@@ -427,6 +448,9 @@ export const sendChatMessage = action({
         organizationId: attempt.organizationId,
         payload: { attemptId: String(args.attemptId), error: String(error?.message ?? error) },
       });
+      if (error instanceof Agent1RejectedError) {
+        throw new Error(`CogAIt needs more of your own thinking first: ${error.message}`);
+      }
       throw new Error(`Gemini API error: ${error.message || error}`);
     }
   },
@@ -448,7 +472,7 @@ export const sendImageFeedback = action({
     responseTime: v.number(),
   }),
   handler: async (ctx, args) => {
-    const userId = await requireAuthFromAction(ctx);
+    const { userId } = await requireAuthFromAction(ctx);
     const activeHelpLevel = args.help_level ?? 1;
     if (!isValidHelpLevel(activeHelpLevel)) {
       throw new Error("Invalid help level");
@@ -465,6 +489,9 @@ export const sendImageFeedback = action({
     if (!assignmentPolicy) {
       throw new Error("Assignment policy not found");
     }
+
+    const recentHelp = await ctx.runQuery(api.ai.getRecentHelpRequests, {});
+    enforceHelpRequestPolicy({ recentHelp, now: Date.now() });
 
     const imageSizeBytes = getBase64SizeBytes(args.image_base64);
     if (imageSizeBytes > 5 * 1024 * 1024) {
@@ -519,7 +546,7 @@ export const sendImageFeedback = action({
               `mode=${args.mode}; help_level=${activeHelpLevel}; system_prompt_version=${args.system_prompt_version}`,
           },
         ],
-        candidateModels: [(process.env.GEMINI_MODEL || "gemini-3.5-flash")],
+        candidateModels: [process.env.GEMINI_MODEL || DEFAULT_GEMINI_MODEL],
         temperature: activeHelpLevel <= 2 ? 0.7 : 0.8,
         maxOutputTokens: getMaxTokens(activeHelpLevel),
         retryQuotaOnce: true,
@@ -531,7 +558,7 @@ export const sendImageFeedback = action({
       let aiResponse = result.text;
       const validation = validateAiResponse(aiResponse, activeHelpLevel);
       if (!validation.valid) {
-        await ctx.runMutation(api.ai.logAiViolation, {
+        await ctx.runMutation(internal.ai.logAiViolation, {
           attemptId: args.attemptId,
           helpLevel: activeHelpLevel,
           violations: validation.violations,
@@ -556,7 +583,7 @@ export const sendImageFeedback = action({
         tokensUsed,
       });
 
-      await ctx.runMutation(api.ai.storeInteraction, {
+      await ctx.runMutation(internal.ai.storeInteraction, {
         attemptId: args.attemptId,
         helpLevel: activeHelpLevel,
         studentInput: `[IMAGE_UPLOAD] mode=${args.mode} prompt=${args.system_prompt_version}`,
@@ -565,7 +592,7 @@ export const sendImageFeedback = action({
         responseTimeMs: responseTime,
       });
       if (isFeatureEnabled("aiUsageMetrics", attempt.organizationId)) {
-        await ctx.runMutation(api.ai.logAiUsageMetric, {
+        await ctx.runMutation(internal.ai.logAiUsageMetric, {
           assignmentId: attempt.assignmentId,
           tokensUsed,
           model: modelUsed,
@@ -575,7 +602,7 @@ export const sendImageFeedback = action({
         tokensUsed,
       });
       if (isFeatureEnabled("promptVersioning", attempt.organizationId)) {
-        await ctx.runMutation((api as any).ai.logPromptVersionEvent, {
+        await ctx.runMutation(internal.ai.logPromptVersionEvent, {
           assignmentId: attempt.assignmentId,
           attemptId: args.attemptId,
           promptVersion,
@@ -584,7 +611,7 @@ export const sendImageFeedback = action({
         });
       }
 
-      await ctx.runMutation(api.attempts.updateHelpStats, {
+      await ctx.runMutation(internal.attempts.updateHelpStats, {
         attemptId: args.attemptId,
         helpLevel: activeHelpLevel,
         reasoningChars: reasoningText.length,
@@ -608,7 +635,9 @@ export const sendImageFeedback = action({
   },
 });
 
-export const storeInteraction = mutation({
+// Internal: only the tutor actions may record interactions/metrics (students could otherwise
+// write their own help history and skip help levels).
+export const storeInteraction = internalMutation({
   args: {
     attemptId: v.id("attempts"),
     helpLevel: v.number(),
@@ -671,21 +700,18 @@ export const getConversationHistory = query({
   },
 });
 
+/**
+ * The signed-in student's most recent help requests across all questions (for the
+ * per-student rate limit in application/aiService.ts).
+ */
 export const getRecentHelpRequests = query({
-  args: {
-    attemptId: v.id("attempts"),
-  },
+  args: {},
   returns: v.array(aiInteractionValidator),
-  handler: async (ctx, args) => {
-    const { userId, profile } = await requireAuthWithProfile(ctx);
-    const attempt = await ctx.db.get(args.attemptId);
-    if (!attempt || attempt.studentId !== userId) {
-      throw new Error("Attempt not found or access denied");
-    }
-    requireSameOrganization(attempt.organizationId, profile.organizationId);
+  handler: async (ctx) => {
+    const { userId } = await requireAuthWithProfile(ctx);
     return await ctx.db
       .query("aiInteractions")
-      .withIndex("by_attempt", (q) => q.eq("attemptId", args.attemptId))
+      .withIndex("by_student", (q) => q.eq("studentId", userId))
       .order("desc")
       .take(10);
   },
@@ -721,7 +747,7 @@ export const submitReflection = mutation({
   },
 });
 
-export const logAiViolation = mutation({
+export const logAiViolation = internalMutation({
   args: {
     attemptId: v.id("attempts"),
     helpLevel: v.number(),
@@ -748,7 +774,7 @@ export const logAiViolation = mutation({
   },
 });
 
-export const logAiUsageMetric = mutation({
+export const logAiUsageMetric = internalMutation({
   args: {
     assignmentId: v.id("assignments"),
     tokensUsed: v.number(),
@@ -776,7 +802,7 @@ export const logAiUsageMetric = mutation({
   },
 });
 
-export const logPromptVersionEvent = mutation({
+export const logPromptVersionEvent = internalMutation({
   args: {
     assignmentId: v.id("assignments"),
     attemptId: v.id("attempts"),
