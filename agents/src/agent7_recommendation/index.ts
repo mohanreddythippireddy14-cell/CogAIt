@@ -5,6 +5,7 @@ import { requireAgentKeyOrUser } from '../middleware/auth.js';
 import { runPreExecutionHooks } from '../hooks/pre_hooks.js';
 import { runPostExecutionHooks } from '../hooks/post_hooks.js';
 import { recommendationEngine, briefingFormatter, convexWriteBriefing, agent7AlertDispatcher } from '../tools/agent7_tools.js';
+import { publishEvent } from '../pubsub/index.js';
 import type { RecommendationAgentInput, RecommendationAgentOutput } from '../types/index.js';
 
 const app = createAgentApp();
@@ -66,8 +67,7 @@ app.post('/workflow/recommendation_generation', requireAgentKeyOrUser, async (c:
     const input = await runPreExecutionHooks(rawInput, 'Agent7') as RecommendationAgentInput;
     let lastErr: any;
     
-    // Tools logic (Simulated execution)
-    const interventions = await recommendationEngine(input.cohort_intelligence);
+    const interventions = recommendationEngine(input.cohort_intelligence);
     
 
     for (let attempts = 0; attempts < 5; attempts++) {
@@ -87,12 +87,18 @@ app.post('/workflow/recommendation_generation', requireAgentKeyOrUser, async (c:
           let out = parseJsonReply(result.choices[0]?.message?.content) as RecommendationAgentOutput;
           out.lecturer_id = input.lecturer_id;
           out.report_date = input.report_date;
-          out.briefing_markdown = briefingFormatter(out.briefing_markdown, out);
+          out.briefing_markdown = briefingFormatter(out.briefing_markdown);
           
           out = await runPostExecutionHooks<RecommendationAgentOutput>(out, 'Agent7', 'RecommendationAgentOutput');
           
           // Finalize
           await convexWriteBriefing(out.lecturer_id, out);
+          await publishEvent('agent_output_produced', {
+            agent: 'Agent7',
+            output_text: out.briefing_markdown,
+            context: JSON.stringify(input.cohort_intelligence).slice(0, 2000),
+            trace_id: `${out.lecturer_id}:agent7:${Date.now()}`,
+          });
           if (out.critical_alerts && out.critical_alerts.length > 0) {
             await agent7AlertDispatcher(`Found ${out.critical_alerts.length} critical alerts for lecturer ${out.lecturer_id}`);
           }

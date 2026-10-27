@@ -225,19 +225,25 @@ app.post("/webhook/student_reply", requireAgentKeyOrUser, async (c: Context) => 
     const aiResponse = await runPostExecutionHooks<string>(aiResponseRaw, 'Negotiator');
     
     if (aiResponse.includes("AGREED")) {
+      // Weak topics were stored on the conversation by Agent 2.
+      const weakTopics: string[] = Array.isArray(conversation.weakTopics) ? conversation.weakTopics : [];
+      if (weakTopics.length === 0) {
+        await appendAgentMessage(conversation_id, "I don't have any weak topics recorded for this assignment, so there's nothing to practise right now.", "closed", message_id);
+        return c.json({ success: true, remediation: "no_weak_topics" });
+      }
       await appendAgentMessage(conversation_id, "Awesome! I'm pulling up the best practice materials for you right now...", "searching", message_id);
-      
+
       await publishEventImpl("remediation_requested", {
         student_id: student_id,
         conversation_id: conversation_id,
-        weak_topics: [], // Ideally parsed from DB
+        weak_topics: weakTopics,
         remediation_preference: "pyqs",
         time_available_minutes: 30,
       });
     } else if (aiResponse.includes("POSTPONED")) {
       await appendAgentMessage(conversation_id, "No worries, we can tackle this later.", "closed", message_id);
       // Add logic to store postponed outcome
-      await publishEventImpl("remediation_postponed", { student_id });
+      await publishEventImpl("remediation_postponed", { student_id, conversation_id });
     } else if (aiResponse.includes("DECLINED")) {
       await appendAgentMessage(conversation_id, "Alright, we'll skip it for now. Let me know if you change your mind!", "closed", message_id);
       await publishEventImpl("remediation_declined", { student_id, reason: "student_declined" });
@@ -314,6 +320,12 @@ app.post("/schedule/expire_pending", requireAgentKey, async (c: Context) => {
 app.post("/webhook/remediation_offer_ready", requireAgentKey, async (c: Context) => {
   const payload = (await c.req.json()) as RemediationOfferReadyPayload;
   console.log(`[NegotiationNode] remediation_offer_ready received for ${payload.student_id}`);
+  return c.json({ success: true });
+});
+
+app.post("/webhook/remediation_postponed", requireAgentKey, async (c: Context) => {
+  const payload = (await c.req.json()) as { student_id: string };
+  console.log(`[NegotiationNode] remediation_postponed received for ${payload.student_id}`);
   return c.json({ success: true });
 });
 

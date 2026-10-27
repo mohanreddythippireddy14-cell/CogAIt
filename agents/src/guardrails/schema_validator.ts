@@ -102,10 +102,9 @@ function validateLongTermAnalystOutputAt(payload: unknown, path = "LongTermAnaly
   assertString(value.student_id, `${path}.student_id`, { minLength: 1 });
   assertIsoDateLike(value.report_date, `${path}.report_date`);
   const cis = asRecord(value.cis_trajectory, `${path}.cis_trajectory`);
-  assertNumber(cis.week_1, `${path}.cis_trajectory.week_1`);
-  assertNumber(cis.month_1, `${path}.cis_trajectory.month_1`);
-  assertNumber(cis.month_3, `${path}.cis_trajectory.month_3`);
-  assertNumber(cis.year_1, `${path}.cis_trajectory.year_1`);
+  for (const window of ["week_1", "month_1", "month_3", "year_1"]) {
+    if (cis[window] !== null) assertNumber(cis[window], `${path}.cis_trajectory.${window}`, { min: 0, max: 100 });
+  }
   assertArray(value.topic_trends, `${path}.topic_trends`).forEach((item, index) =>
     validateTopicTrend(item, `${path}.topic_trends[${index}]`),
   );

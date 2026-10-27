@@ -59,7 +59,8 @@ app.post('/webhook/session_ended', requireAgentKeyOrUser, async (c: Context) => 
           const summaryText = await runPostExecutionHooks<string>(summaryTextRaw, 'Agent2Summary');
 
           
-          const conversationId = await getOrCreateConversation(parsedOutput.student_id, parsedOutput.assignment_id);
+          // Store the weak topics on the conversation so a later "yes" in chat can request remediation for them.
+          const conversationId = await getOrCreateConversation(parsedOutput.student_id, parsedOutput.assignment_id, parsedOutput.weak_topics);
           // Set status to negotiating so the Negotiation Node can take over next
           await appendAgentMessage(conversationId, summaryText, "negotiating");
           console.log(`[Agent2] Appended conversational summary to chat`);
@@ -69,7 +70,11 @@ app.post('/webhook/session_ended', requireAgentKeyOrUser, async (c: Context) => 
         // ----------------------------------------------------------------------
 
         await publishEvent('weak_topics_identified', { ...parsedOutput, remediation_preference: 'pyqs' });
-        await publishEvent('session_record_written', { student_id: parsedOutput.student_id, report_date: new Date().toISOString() });
+        await publishEvent('session_record_written', {
+          student_id: parsedOutput.student_id,
+          assignment_id: parsedOutput.assignment_id,
+          report_date: new Date().toISOString(),
+        });
         return c.json({ success: true, logged: parsedOutput });
       } catch (e: any) { lastErr = e; console.warn(`[Agent2] ${model} failed: ${e.message?.slice(0,80)}`); }
     }

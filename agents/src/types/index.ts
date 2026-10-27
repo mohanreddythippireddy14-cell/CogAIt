@@ -120,6 +120,8 @@ export interface ContentAgentOutput {
 export interface LongTermAnalystInput {
   student_id: string;
   report_date: string; // ISO format date
+  /** Assignment that triggered the report; used as the cohort (batch) id. */
+  assignment_id?: string;
 }
 
 export interface TopicTrend {
@@ -132,11 +134,12 @@ export interface TopicTrend {
 export interface LongTermAnalystOutput {
   student_id: string;
   report_date: string;
+  /** Average CIS per window; null when there is no submitted attempt in the window. */
   cis_trajectory: {
-    week_1: number;
-    month_1: number;
-    month_3: number;
-    year_1: number;
+    week_1: number | null;
+    month_1: number | null;
+    month_3: number | null;
+    year_1: number | null;
   };
   topic_trends: TopicTrend[];
   at_risk: boolean;
@@ -150,13 +153,19 @@ export type StudentReport = LongTermAnalystOutput;
 // AGENT 5: Assignment Creator
 // ==========================================
 export interface AssignmentCreatorInput {
+  /** Convex user id of the lecturer who owns the draft. */
   lecturer_id: string;
   document_ai_extracted_text: string;
   source_filename: string;
+  /** Subject used when a question's subject cannot be determined. Defaults to Physics. */
+  subject?: Subject;
 }
+
+export type Subject = 'Physics' | 'Chemistry' | 'Math';
 
 export interface CogAItQuestion {
   text: string;
+  subject?: Subject;
   options?: string[];
   correct_answer?: string;
   mapped_topic: string;
