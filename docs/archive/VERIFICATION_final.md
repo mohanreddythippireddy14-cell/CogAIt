@@ -1,3 +1,5 @@
+> **Archived note (Oct 2026):** historical, not current. Some claims below were found to be wrong; see `docs/archive/README.md`.
+
 # Final Quality Pass Verification
 
 As part of Phase 6, the generated documentation suite was audited against the state ledger to ensure no unverified claims or hallucinated facts were included.

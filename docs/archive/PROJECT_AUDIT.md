@@ -1,3 +1,5 @@
+> **Archived note (Oct 2026):** historical, not current. Some claims below were found to be wrong; see `docs/archive/README.md`.
+
 # CogAIt - Pre-Push Project Audit
 
 ## 1. Executive Summary

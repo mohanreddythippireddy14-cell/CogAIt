@@ -1,3 +1,5 @@
+> **Archived note (Oct 2026):** historical, not current. Some claims below were found to be wrong; see `docs/archive/README.md`.
+
 # CogAIt — Think First, AI Next
 
 > **Protecting independent thinking in the age of artificial intelligence — a learning system designed to strengthen reasoning, judgment, and cognitive independence before AI ever steps in.**
