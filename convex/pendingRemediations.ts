@@ -1,5 +1,7 @@
 import { mutation, query } from "./_generated/server";
 import { v } from "convex/values";
+import { agentKeyArg, requireAgentKey } from "./lib/agentAuth";
+import { requireAuth } from "./lib/authGuards";
 
 const preferenceValidator = v.union(
   v.literal("pyqs"),
@@ -14,6 +16,7 @@ const preferenceValidator = v.union(
  */
 export const createPending = mutation({
   args: {
+    ...agentKeyArg,
     student_id: v.string(),
     assignment_id: v.string(),
     weak_topics: v.array(v.string()),
@@ -21,6 +24,7 @@ export const createPending = mutation({
   },
   returns: v.id("pendingRemediations"),
   handler: async (ctx, args) => {
+    requireAgentKey(args.agentKey);
     return await ctx.db.insert("pendingRemediations", {
       student_id: args.student_id,
       assignment_id: args.assignment_id,
@@ -37,6 +41,7 @@ export const createPending = mutation({
  */
 export const listAwaiting = query({
   args: {
+    agentKey: v.optional(v.string()),
     student_id: v.string(),
     assignment_id: v.optional(v.string()),
   },
@@ -51,12 +56,19 @@ export const listAwaiting = query({
         v.literal("accepted"),
         v.literal("declined"),
         v.literal("expired"),
+        v.literal("postponed"),
       ),
       created_at: v.number(),
       expires_at: v.number(),
     }),
   ),
   handler: async (ctx, args) => {
+    // Agents may list any student's offers; a signed-in student only their own.
+    if (args.agentKey !== undefined) {
+      requireAgentKey(args.agentKey);
+    } else if (args.student_id !== (await requireAuth(ctx))) {
+      return [];
+    }
     const rows = await ctx.db
       .query("pendingRemediations")
       .withIndex("by_student_status", (q) =>
@@ -84,7 +96,7 @@ export const listAwaiting = query({
  * Fetches a pending remediation record by id for test verification.
  */
 export const getById = query({
-  args: { pending_remediation_id: v.id("pendingRemediations") },
+  args: { ...agentKeyArg, pending_remediation_id: v.id("pendingRemediations") },
   returns: v.union(
     v.object({
       _id: v.id("pendingRemediations"),
@@ -96,6 +108,7 @@ export const getById = query({
         v.literal("accepted"),
         v.literal("declined"),
         v.literal("expired"),
+        v.literal("postponed"),
       ),
       created_at: v.number(),
       expires_at: v.number(),
@@ -106,6 +119,7 @@ export const getById = query({
     v.null(),
   ),
   handler: async (ctx, args) => {
+    requireAgentKey(args.agentKey);
     const row = await ctx.db.get(args.pending_remediation_id);
     if (!row) return null;
     return {
@@ -128,11 +142,13 @@ export const getById = query({
  */
 export const updateExpiry = mutation({
   args: {
+    ...agentKeyArg,
     pending_remediation_id: v.id("pendingRemediations"),
     expires_at: v.number(),
   },
   returns: v.null(),
   handler: async (ctx, args) => {
+    requireAgentKey(args.agentKey);
     await ctx.db.patch(args.pending_remediation_id, { expires_at: args.expires_at });
     return null;
   },
@@ -143,6 +159,7 @@ export const updateExpiry = mutation({
  */
 export const respond = mutation({
   args: {
+    ...agentKeyArg,
     pending_remediation_id: v.id("pendingRemediations"),
     student_id: v.string(),
     consent: v.boolean(),
@@ -171,6 +188,7 @@ export const respond = mutation({
     }),
   ),
   handler: async (ctx, args) => {
+    requireAgentKey(args.agentKey);
     const row = await ctx.db.get(args.pending_remediation_id);
     if (!row) {
       return { ok: false, reason: "pending_remediation_not_found" };
@@ -246,7 +264,7 @@ export const respond = mutation({
  * Expires stale remediation offers and returns all records transitioned to "expired".
  */
 export const expireDue = mutation({
-  args: { now_ts: v.number() },
+  args: { ...agentKeyArg, now_ts: v.number() },
   returns: v.array(
     v.object({
       pending_remediation_id: v.id("pendingRemediations"),
@@ -257,6 +275,7 @@ export const expireDue = mutation({
     }),
   ),
   handler: async (ctx, args) => {
+    requireAgentKey(args.agentKey);
     const rows = await ctx.db
       .query("pendingRemediations")
       .withIndex("by_status_expires", (q) =>

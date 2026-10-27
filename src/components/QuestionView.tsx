@@ -73,8 +73,6 @@ export function QuestionView() {
   const startAttempt = useMutation(api.attempts.startAttempt);
   const saveAttemptDraft = useMutation(api.attempts.saveAttemptDraft);
   const submitAttempt = useMutation(api.attempts.submitAttempt);
-  const storeAgentInteraction = useMutation(api.ai.storeInteraction);
-  const updateHelpStats = useMutation(api.attempts.updateHelpStats);
   const convex = useConvex();
   const AGENT_BASE_URL = import.meta.env.VITE_AGENT_URL || "";
   const authToken = useAuthToken();

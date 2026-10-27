@@ -1,4 +1,4 @@
-import { mutation, query, MutationCtx } from "./_generated/server";
+import { internalMutation, mutation, query, MutationCtx } from "./_generated/server";
 import { v } from "convex/values";
 import { api, internal } from "./_generated/api";
 import { Id } from "./_generated/dataModel";
@@ -1077,7 +1077,8 @@ export const getResultsReport = query({
   },
 });
 
-export const updateHelpStats = mutation({
+// Internal: called by the tutor actions after each AI reply.
+export const updateHelpStats = internalMutation({
   args: {
     attemptId: v.id("attempts"),
     helpLevel: v.number(),

@@ -1,4 +1,4 @@
-import { action, mutation, query } from "./_generated/server";
+import { action, internalMutation, mutation, query } from "./_generated/server";
 import { v } from "convex/values";
 import { api, internal } from "./_generated/api";
 import { HELP_LEVELS } from "./constants";
@@ -230,7 +230,7 @@ export const sendChatMessage = action({
     responseTime: v.number(),
   }),
   handler: async (ctx, args) => {
-    const userId = await requireAuthFromAction(ctx);
+    const { userId } = await requireAuthFromAction(ctx);
 
     const history = await ctx.runQuery(api.ai.getConversationHistory, {
       attemptId: args.attemptId,
@@ -327,7 +327,7 @@ export const sendChatMessage = action({
       let regenerationAttempts = 0;
       while (!validation.valid && regenerationAttempts < RESPONSE_REGENERATION_LIMIT) {
         regenerationAttempts += 1;
-        await ctx.runMutation(api.ai.logAiViolation, {
+        await ctx.runMutation(internal.ai.logAiViolation, {
           attemptId: args.attemptId,
           helpLevel: activeHelpLevel,
           violations: validation.violations,
@@ -362,7 +362,7 @@ export const sendChatMessage = action({
         validation = validateAiResponse(responseText, effectiveHelpLevel);
       }
       if (!validation.valid) {
-        await ctx.runMutation(api.ai.logAiViolation, {
+        await ctx.runMutation(internal.ai.logAiViolation, {
           attemptId: args.attemptId,
           helpLevel: effectiveHelpLevel,
           violations: validation.violations,
@@ -380,7 +380,7 @@ export const sendChatMessage = action({
 
       const responseTime = Date.now() - startTime;
 
-      await ctx.runMutation(api.ai.storeInteraction, {
+      await ctx.runMutation(internal.ai.storeInteraction, {
         attemptId: args.attemptId,
         helpLevel: effectiveHelpLevel,
         studentInput: args.studentInput,
@@ -389,7 +389,7 @@ export const sendChatMessage = action({
         responseTimeMs: responseTime,
       });
       if (isFeatureEnabled("aiUsageMetrics", attempt.organizationId)) {
-        await ctx.runMutation(api.ai.logAiUsageMetric, {
+        await ctx.runMutation(internal.ai.logAiUsageMetric, {
           assignmentId: question.assignmentId,
           tokensUsed,
           model: modelUsed,
@@ -399,7 +399,7 @@ export const sendChatMessage = action({
         tokensUsed,
       });
       if (isFeatureEnabled("promptVersioning", attempt.organizationId)) {
-        await ctx.runMutation((api as any).ai.logPromptVersionEvent, {
+        await ctx.runMutation(internal.ai.logPromptVersionEvent, {
           assignmentId: question.assignmentId,
           attemptId: args.attemptId,
           promptVersion,
@@ -408,7 +408,7 @@ export const sendChatMessage = action({
         });
       }
 
-      await ctx.runMutation(api.attempts.updateHelpStats, {
+      await ctx.runMutation(internal.attempts.updateHelpStats, {
         attemptId: args.attemptId,
         helpLevel: activeHelpLevel,
         reasoningChars: reasoningText.length,
@@ -448,7 +448,7 @@ export const sendImageFeedback = action({
     responseTime: v.number(),
   }),
   handler: async (ctx, args) => {
-    const userId = await requireAuthFromAction(ctx);
+    const { userId } = await requireAuthFromAction(ctx);
     const activeHelpLevel = args.help_level ?? 1;
     if (!isValidHelpLevel(activeHelpLevel)) {
       throw new Error("Invalid help level");
@@ -531,7 +531,7 @@ export const sendImageFeedback = action({
       let aiResponse = result.text;
       const validation = validateAiResponse(aiResponse, activeHelpLevel);
       if (!validation.valid) {
-        await ctx.runMutation(api.ai.logAiViolation, {
+        await ctx.runMutation(internal.ai.logAiViolation, {
           attemptId: args.attemptId,
           helpLevel: activeHelpLevel,
           violations: validation.violations,
@@ -556,7 +556,7 @@ export const sendImageFeedback = action({
         tokensUsed,
       });
 
-      await ctx.runMutation(api.ai.storeInteraction, {
+      await ctx.runMutation(internal.ai.storeInteraction, {
         attemptId: args.attemptId,
         helpLevel: activeHelpLevel,
         studentInput: `[IMAGE_UPLOAD] mode=${args.mode} prompt=${args.system_prompt_version}`,
@@ -565,7 +565,7 @@ export const sendImageFeedback = action({
         responseTimeMs: responseTime,
       });
       if (isFeatureEnabled("aiUsageMetrics", attempt.organizationId)) {
-        await ctx.runMutation(api.ai.logAiUsageMetric, {
+        await ctx.runMutation(internal.ai.logAiUsageMetric, {
           assignmentId: attempt.assignmentId,
           tokensUsed,
           model: modelUsed,
@@ -575,7 +575,7 @@ export const sendImageFeedback = action({
         tokensUsed,
       });
       if (isFeatureEnabled("promptVersioning", attempt.organizationId)) {
-        await ctx.runMutation((api as any).ai.logPromptVersionEvent, {
+        await ctx.runMutation(internal.ai.logPromptVersionEvent, {
           assignmentId: attempt.assignmentId,
           attemptId: args.attemptId,
           promptVersion,
@@ -584,7 +584,7 @@ export const sendImageFeedback = action({
         });
       }
 
-      await ctx.runMutation(api.attempts.updateHelpStats, {
+      await ctx.runMutation(internal.attempts.updateHelpStats, {
         attemptId: args.attemptId,
         helpLevel: activeHelpLevel,
         reasoningChars: reasoningText.length,
@@ -608,7 +608,9 @@ export const sendImageFeedback = action({
   },
 });
 
-export const storeInteraction = mutation({
+// Internal: only the tutor actions may record interactions/metrics (students could otherwise
+// write their own help history and skip help levels).
+export const storeInteraction = internalMutation({
   args: {
     attemptId: v.id("attempts"),
     helpLevel: v.number(),
@@ -721,7 +723,7 @@ export const submitReflection = mutation({
   },
 });
 
-export const logAiViolation = mutation({
+export const logAiViolation = internalMutation({
   args: {
     attemptId: v.id("attempts"),
     helpLevel: v.number(),
@@ -748,7 +750,7 @@ export const logAiViolation = mutation({
   },
 });
 
-export const logAiUsageMetric = mutation({
+export const logAiUsageMetric = internalMutation({
   args: {
     assignmentId: v.id("assignments"),
     tokensUsed: v.number(),
@@ -776,7 +778,7 @@ export const logAiUsageMetric = mutation({
   },
 });
 
-export const logPromptVersionEvent = mutation({
+export const logPromptVersionEvent = internalMutation({
   args: {
     assignmentId: v.id("assignments"),
     attemptId: v.id("attempts"),
