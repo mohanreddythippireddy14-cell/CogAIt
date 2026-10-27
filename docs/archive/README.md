@@ -10,6 +10,7 @@ Working notes from earlier documentation and audit passes, kept for history. **T
 | `STRESS_TEST_SUITE.md` | 30 planned edge-case scenarios (a design list, not executed results) |
 | `VERIFICATION_final.md`, `VERIFICATION_session1.md` | Doc verification notes. `VERIFICATION_final.md` wrongly marks the 100-character think-first gate and the "gemini-2.5-flash via Groq" claim as verified |
 | `README_NEW.md` | Draft README from the documentation pass |
+| `OPEN_ITEMS.md` | Earlier open-items list; folded into `FUTURE_ACTIONS.md` |
 
 Corrections made in the October 2026 cleanup (see `FUTURE_ACTIONS.md`):
 - The think-first gate is **not enforced** in code yet. `minReasoningChars` (default 30) is stored per assignment but never checked.

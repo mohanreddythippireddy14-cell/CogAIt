@@ -1,3 +1,5 @@
+> **Archived note (Oct 2026):** superseded by `FUTURE_ACTIONS.md` in the repo root.
+
 # OPEN ITEMS
 
 Every TODO, unverified claim, missing asset and credibility gap. Format: **ID — item — what closes it**. IDs correspond to `docs/_state/LEDGER.md` rows where one exists.
