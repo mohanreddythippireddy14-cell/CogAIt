@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "build": "tsc",
+    "typecheck": "tsc --noEmit",
     "test:negotiation": "tsx src/scripts/test_negotiation_flow.ts",
     "dev:agent1": "node --env-file=.env dist/agent1_socratic/index.js",
     "dev:agent2": "node --env-file=.env dist/agent2_analyst/index.js",
@@ -13,8 +14,10 @@
     "dev:agent5": "node --env-file=.env dist/agent5_ingestion/index.js",
     "dev:agent6": "node --env-file=.env dist/agent6_cohort/index.js",
     "dev:agent7": "node --env-file=.env dist/agent7_recommendation/index.js",
+    "dev:agent8": "node --env-file=.env dist/agent8_judge/index.js",
     "dev:agent-negotiation": "node --env-file=.env dist/middleware/negotiation_node.js",
-    "dev:agent8": "node --env-file=.env dist/agent8_judge/index.js"
+    "dev:watchdog": "node --env-file=.env dist/watchdog/index.js",
+    "start:all": "npm-run-all --parallel dev:agent1 dev:agent2 dev:agent3 dev:agent4 dev:agent5 dev:agent6 dev:agent7 dev:agent8 dev:agent-negotiation"
   },
   "dependencies": {
     "@google/genai": "^1.49.0",
@@ -26,6 +29,8 @@
   },
   "devDependencies": {
     "@types/node": "^20.12.7",
-    "typescript": "^5.4.5"
+    "typescript": "^5.4.5",
+    "npm-run-all": "^4.1.5",
+    "tsx": "^4.19.2"
   }
 }
