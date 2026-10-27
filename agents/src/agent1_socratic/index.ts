@@ -1,22 +1,14 @@
-import { serve } from '@hono/node-server';
-import { Hono } from 'hono';
-import Groq from 'groq-sdk';
+import type { Context } from 'hono';
+import { createAgentApp, startAgentServer } from '../lib/server.js';
+import { getModel, llm, parseJsonReply } from '../lib/llm.js';
+import { requireAgentKey } from '../middleware/auth.js';
 import { runPreExecutionHooks } from '../hooks/pre_hooks.js';
 import { runPostExecutionHooks } from '../hooks/post_hooks.js';
 import { reasoningValidator, levelTracker, sessionState } from '../tools/agent1_tools.js';
 import type { SocraticAgentInput, SocraticAgentOutput } from '../types/index.js';
 
-const app = new Hono();
-const groq = new Groq({ apiKey: process.env.GROQ_API_KEY, baseURL: process.env.CONVEX_URL?.replace(".cloud", ".site") + "/api/gemini-proxy/" || "https://dynamic-alpaca-596.convex.site/api/gemini-proxy/" });
-const MODELS = [(process.env.GEMINI_MODEL || 'gemini-3.8-flash')];
-
-app.use('*', async (c, next) => {
-  c.header('Access-Control-Allow-Origin', '*');
-  c.header('Access-Control-Allow-Methods', 'POST, OPTIONS');
-  c.header('Access-Control-Allow-Headers', 'Content-Type');
-  if (c.req.method === 'OPTIONS') return c.text('OK');
-  await next();
-});
+const app = createAgentApp();
+const MODELS = [getModel()];
 
 const systemPrompt = `You are the Socratic Validation Agent for CogAIt. Your singular purpose is to foster cognitive independence in JEE and NEET aspirants.
 
@@ -38,7 +30,7 @@ async function callWithFallback(input: SocraticAgentInput): Promise<SocraticAgen
   for (const model of MODELS) {
     try {
       console.log(`[Agent1] Trying model: ${model}`);
-      const result = await groq.chat.completions.create({
+      const result = await llm().chat.completions.create({
         model,
         messages: [
           { role: 'system', content: systemPrompt },
@@ -48,7 +40,7 @@ async function callWithFallback(input: SocraticAgentInput): Promise<SocraticAgen
         response_format: { type: 'json_object' }
       });
       console.log(`[Agent1] Success with model: ${model}`);
-      return JSON.parse(result.choices[0]?.message?.content || '{}') as SocraticAgentOutput;
+      return parseJsonReply(result.choices[0]?.message?.content) as SocraticAgentOutput;
     } catch (err: any) {
       console.warn(`[Agent1] Model ${model} failed: ${err.message?.slice(0, 100)}`);
       lastError = err;
@@ -57,7 +49,7 @@ async function callWithFallback(input: SocraticAgentInput): Promise<SocraticAgen
   throw lastError;
 }
 
-app.post('/invoke', async (c) => {
+app.post('/invoke', requireAgentKey, async (c: Context) => {
   try {
     const rawInput = await c.req.json();
     const input = await runPreExecutionHooks(rawInput, 'Agent1') as SocraticAgentInput;
@@ -80,7 +72,5 @@ app.post('/invoke', async (c) => {
   }
 });
 
-const port = process.env.PORT ? parseInt(process.env.PORT) : 8081;
-console.log(`[agent1_socratic] Starting on port ${port}`);
-serve({ fetch: app.fetch, port });
+startAgentServer(app, 'agent1_socratic', 8081);
 export default app;

@@ -8,12 +8,11 @@
  * 6) Negotiation node marks pending remediation as accepted in Convex
  * 7) Negotiation node emits remediation_requested -> Agent 3 fires
  */
-import { EnvHttpProxyAgent, setGlobalDispatcher } from 'undici';
-setGlobalDispatcher(new EnvHttpProxyAgent());
-import { serve } from "@hono/node-server";
-import { Hono } from "hono";
+import type { Context } from "hono";
 import { publishEvent } from "../pubsub/index.js";
-import Groq from 'groq-sdk';
+import { createAgentApp, startAgentServer } from "../lib/server.js";
+import { getModel, llm } from "../lib/llm.js";
+import { requireAgentKey, requireAgentKeyOrUser } from "./auth.js";
 import {
   createPendingRemediationRecord,
   expirePendingRemediationRecords,
@@ -51,17 +50,9 @@ interface NegotiationResponseInput {
 const CONSENT_WINDOW_MS = 15 * 60 * 1000;
 const EXPIRY_SWEEP_INTERVAL_MS = 60 * 1000;
 
-const app = new Hono();
-app.use('*', async (c, next) => {
-  c.header('Access-Control-Allow-Origin', '*');
-  c.header('Access-Control-Allow-Methods', 'POST, OPTIONS');
-  c.header('Access-Control-Allow-Headers', 'Content-Type');
-  if (c.req.method === 'OPTIONS') return c.text('OK');
-  await next();
-});
+const app = createAgentApp();
 
-const groq = new Groq({ apiKey: process.env.GOOGLE_API_KEY, baseURL: process.env.CONVEX_URL?.replace(".cloud", ".site") + "/api/gemini-proxy/" || "https://dynamic-alpaca-596.convex.site/api/gemini-proxy/" });
-const MODEL = process.env.GEMINI_MODEL || 'gemini-3.8-flash';
+const MODEL = getModel();
 let publishEventImpl = publishEvent;
 
 /**
@@ -162,7 +153,7 @@ export async function handleWeakTopicsIdentified(
   return { status: "awaiting_consent", pending_remediation_id: pendingId };
 }
 
-app.post("/webhook/weak_topics_identified", async (c) => {
+app.post("/webhook/weak_topics_identified", requireAgentKey, async (c: Context) => {
   try {
     const rawInput = await c.req.json();
     const input = await runPreExecutionHooks(rawInput, 'Negotiator') as AssignmentAnalystOutput;
@@ -172,7 +163,7 @@ app.post("/webhook/weak_topics_identified", async (c) => {
     
     if (input.weak_topics.length > 0) {
       // Prompt the LLM to start negotiation
-      const result = await groq.chat.completions.create({
+      const result = await llm().chat.completions.create({
         model: MODEL,
         messages: [
           { role: 'system', content: "You are a supportive Negotiator Agent. Based on the student's specific weak topics from this assignment, proactively message the student and convince them to do a quick remediation practice. Keep it conversational and under 2 sentences. Use real assignment data only." },
@@ -197,15 +188,19 @@ app.post("/webhook/weak_topics_identified", async (c) => {
   }
 });
 
-app.post("/webhook/student_reply", async (c) => {
+app.post("/webhook/student_reply", requireAgentKeyOrUser, async (c: Context) => {
   try {
     const payload = await c.req.json();
+    if (!c.get("callerIsService")) payload.student_id = c.get("callerUserId");
     await runPreExecutionHooks(payload, 'Negotiator');
     const { conversation_id, message, student_id, message_id } = payload;
     
     // Fetch chat history
     const conversation = await getConversation(conversation_id);
     if (!conversation) return c.json({ error: "No conversation found" }, 404);
+    if (String(conversation.studentId) !== String(student_id)) {
+      return c.json({ error: "Forbidden: not your conversation" }, 403);
+    }
     
     // Check if we already replied to this message_id locally before calling LLM
     if (message_id && conversation.messages.some((m: any) => m.role === 'agent' && m.inReplyTo === message_id)) {
@@ -220,7 +215,7 @@ app.post("/webhook/student_reply", async (c) => {
     
     messages.unshift({ role: 'system', content: 'You are a supportive Negotiator Agent. The student just replied to your offer for remediation practice. If they agree or say yes, respond exactly with "AGREED". If they say "do it later", "later", or want to postpone, respond exactly with "POSTPONED". If they explicitly refuse or say a clear "no", or if this is the 3rd turn of negotiation, respond exactly with "DECLINED". Otherwise, gently persuade them in 1-2 sentences using real assignment data.' });
     
-    const result = await groq.chat.completions.create({
+    const result = await llm().chat.completions.create({
       model: MODEL,
       messages,
       temperature: 0.5
@@ -289,9 +284,12 @@ export async function handleNegotiationRespond(
   return { status: result.record.status };
 }
 
-app.post("/negotiation/respond", async (c) => {
+app.post("/negotiation/respond", requireAgentKeyOrUser, async (c: Context) => {
   try {
-    const result = await handleNegotiationRespond(await c.req.json());
+    const payload = await c.req.json();
+    // A browser caller may only answer its own offer.
+    if (!c.get("callerIsService")) payload.student_id = c.get("callerUserId");
+    const result = await handleNegotiationRespond(payload);
     if (result.status === "rejected") {
       return c.json({ success: false, reason: result.reason }, 400);
     }
@@ -303,7 +301,7 @@ app.post("/negotiation/respond", async (c) => {
   }
 });
 
-app.post("/schedule/expire_pending", async (c) => {
+app.post("/schedule/expire_pending", requireAgentKey, async (c: Context) => {
   try {
     await sweepExpiredRemediations();
     return c.json({ success: true });
@@ -313,13 +311,13 @@ app.post("/schedule/expire_pending", async (c) => {
   }
 });
 
-app.post("/webhook/remediation_offer_ready", async (c) => {
+app.post("/webhook/remediation_offer_ready", requireAgentKey, async (c: Context) => {
   const payload = (await c.req.json()) as RemediationOfferReadyPayload;
   console.log(`[NegotiationNode] remediation_offer_ready received for ${payload.student_id}`);
   return c.json({ success: true });
 });
 
-app.post("/webhook/remediation_declined", async (c) => {
+app.post("/webhook/remediation_declined", requireAgentKey, async (c: Context) => {
   const payload = (await c.req.json()) as RemediationDeclinedPayload;
   console.log(`[NegotiationNode] remediation_declined received for ${payload.student_id} (${payload.reason})`);
   return c.json({ success: true });
@@ -332,7 +330,5 @@ setInterval(() => {
   });
 }, EXPIRY_SWEEP_INTERVAL_MS);
 
-const port = 8089;
-console.log(`[negotiation_node] Starting on port ${port}`);
-serve({ fetch: app.fetch, port });
+startAgentServer(app, "negotiation_node", 8089);
 export default app;

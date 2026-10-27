@@ -1,21 +1,13 @@
-import { serve } from '@hono/node-server';
-import { Hono } from 'hono';
-import Groq from 'groq-sdk';
+import type { Context } from 'hono';
+import { createAgentApp, startAgentServer } from '../lib/server.js';
+import { getModel, llm, parseJsonReply } from '../lib/llm.js';
+import { requireAgentKey } from '../middleware/auth.js';
 import { runPreExecutionHooks } from '../hooks/pre_hooks.js';
 import { runPostExecutionHooks } from '../hooks/post_hooks.js';
 import type { JudgeInput, JudgeOutput } from '../types/index.js';
 
-const app = new Hono();
-const groq = new Groq({ apiKey: process.env.GROQ_API_KEY, baseURL: process.env.CONVEX_URL?.replace(".cloud", ".site") + "/api/gemini-proxy/" || "https://dynamic-alpaca-596.convex.site/api/gemini-proxy/" });
-const MODELS = [(process.env.GEMINI_MODEL || 'gemini-3.8-flash')];
-
-app.use('*', async (c, next) => {
-  c.header('Access-Control-Allow-Origin', '*');
-  c.header('Access-Control-Allow-Methods', 'POST, OPTIONS');
-  c.header('Access-Control-Allow-Headers', 'Content-Type');
-  if (c.req.method === 'OPTIONS') return c.text('OK');
-  await next();
-});
+const app = createAgentApp();
+const MODELS = [getModel()];
 
 const systemPrompt = `You are The Judge — the automated QA system for CogAIt agents. Audit agent outputs against rubrics:
 - Agent 1 (Socratic): ZERO tolerance for direct answers. Must end with question.
@@ -26,7 +18,7 @@ Flag policy violations with severity (warning/critical).
 
 Respond with ONLY valid JSON: {"evaluation_id":"string","timestamp":"ISO","agent_evaluated":"string","policy_violations_detected":0,"schema_failures_detected":0,"latency_anomaly":false,"error_rate_anomaly":false,"alert_fired":false,"evaluation_details":[{"check_name":"string","passed":true,"details":"string"}]}`;
 
-app.post('/schedule/evaluate', async (c) => {
+app.post('/schedule/evaluate', requireAgentKey, async (c: Context) => {
   try {
     const rawInput = await c.req.json();
     const input = await runPreExecutionHooks(rawInput, 'Agent8') as JudgeInput;
@@ -34,7 +26,7 @@ app.post('/schedule/evaluate', async (c) => {
     for (const model of MODELS) {
       try {
         console.log(`[Agent8] Trying ${model} to evaluate ${input.evaluation_target}`);
-        const result = await groq.chat.completions.create({
+        const result = await llm().chat.completions.create({
           model,
           messages: [
             { role: 'system', content: systemPrompt },
@@ -43,7 +35,7 @@ app.post('/schedule/evaluate', async (c) => {
           temperature: 0.1,
           response_format: { type: 'json_object' }
         });
-        let out = JSON.parse(result.choices[0]?.message?.content || '{}') as JudgeOutput;
+        let out = parseJsonReply(result.choices[0]?.message?.content) as JudgeOutput;
         out = await runPostExecutionHooks<JudgeOutput>(out, 'Agent8', 'JudgeOutput');
         console.log(`[Agent8] Evaluation complete: ${out.policy_violations_detected} violations, alert=${out.alert_fired}`);
         return c.json({ success: true, evaluation: out });
@@ -55,7 +47,5 @@ app.post('/schedule/evaluate', async (c) => {
   }
 });
 
-const port = process.env.PORT ? parseInt(process.env.PORT) : 8088;
-console.log(`[agent8_judge] Starting on port ${port}`);
-serve({ fetch: app.fetch, port });
+startAgentServer(app, 'agent8_judge', 8088);
 export default app;

@@ -1,20 +1,8 @@
-import { Hono } from 'hono';
+import { createAgentApp, startAgentServer } from '../lib/server.js';
 
-const app = new Hono();
+// Used by an external cron job to check that the agent host is up (GET /health).
+const app = createAgentApp();
 
-// Used by the external dumb cron job to verify Agent 8's health
-app.get('/health', (c) => {
-  return c.text('OK', 200);
-});
-
-
-import { serve } from '@hono/node-server';
-
-const port = process.env.PORT ? parseInt(process.env.PORT) : 8089;
-console.log(`[watchdog] Starting on port ${port}`);
-serve({
-  fetch: app.fetch,
-  port,
-});
+startAgentServer(app, 'watchdog', 8090);
 
 export default app;

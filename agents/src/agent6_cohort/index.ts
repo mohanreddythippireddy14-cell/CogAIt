@@ -1,23 +1,15 @@
-import { serve } from '@hono/node-server';
-import { Hono } from 'hono';
-import Groq from 'groq-sdk';
+import type { Context } from 'hono';
+import { createAgentApp, startAgentServer } from '../lib/server.js';
+import { getModel, llm, parseJsonReply } from '../lib/llm.js';
+import { requireAgentKey } from '../middleware/auth.js';
 import { publishEvent } from '../pubsub/index.js';
 import { runPreExecutionHooks } from '../hooks/pre_hooks.js';
 import { runPostExecutionHooks } from '../hooks/post_hooks.js';
 import { bigqueryCohortQuery, reportAggregator, riskDetector, convexWriteCohort } from '../tools/agent6_tools.js';
 import type { CohortAnalystInput, CohortAnalystOutput } from '../types/index.js';
 
-const app = new Hono();
-const groq = new Groq({ apiKey: process.env.GROQ_API_KEY, baseURL: process.env.CONVEX_URL?.replace(".cloud", ".site") + "/api/gemini-proxy/" || "https://dynamic-alpaca-596.convex.site/api/gemini-proxy/" });
-const MODELS = [(process.env.GEMINI_MODEL || 'gemini-3.8-flash')];
-
-app.use('*', async (c, next) => {
-  c.header('Access-Control-Allow-Origin', '*');
-  c.header('Access-Control-Allow-Methods', 'POST, OPTIONS');
-  c.header('Access-Control-Allow-Headers', 'Content-Type');
-  if (c.req.method === 'OPTIONS') return c.text('OK');
-  await next();
-});
+const app = createAgentApp();
+const MODELS = [getModel()];
 
 const systemPrompt = `You are the batch-level intelligence analyst for CogAIt. You receive individual student reports from Agent 4 for an entire batch.
 
@@ -32,7 +24,7 @@ You forward structured cohort intelligence to Agent 7. You never generate recomm
 You MUST respond with ONLY valid JSON in this exact format:
 {"batch_id":"string","report_date":"string","failing_topics":[{"topic":"string","failure_rate_pct":50,"avg_scaffold_depth":2}],"at_risk_students":[{"student_id":"string","reason":"string"}],"ai_dependency_students":["string"],"cohort_cis_avg":75.0,"cohort_cis_trend":"improving|stable|declining"}`;
 
-app.post('/workflow/cohort_analysis', async (c) => {
+app.post('/workflow/cohort_analysis', requireAgentKey, async (c: Context) => {
   try {
     const rawInput = await c.req.json();
     const input = await runPreExecutionHooks(rawInput, 'Agent6') as CohortAnalystInput;
@@ -49,7 +41,7 @@ app.post('/workflow/cohort_analysis', async (c) => {
     for (const model of MODELS) {
       try {
         console.log(`[Agent6] Trying ${model}`);
-        const result = await groq.chat.completions.create({
+        const result = await llm().chat.completions.create({
           model,
           messages: [
             { role: 'system', content: systemPrompt },
@@ -59,7 +51,7 @@ app.post('/workflow/cohort_analysis', async (c) => {
           response_format: { type: 'json_object' }
         });
 
-        let out = JSON.parse(result.choices[0]?.message?.content || '{}') as CohortAnalystOutput;
+        let out = parseJsonReply(result.choices[0]?.message?.content) as CohortAnalystOutput;
         out.batch_id = input.batch_id;
         out.report_date = input.report_date;
         out = await runPostExecutionHooks<CohortAnalystOutput>(out, 'Agent6', 'CohortAnalystOutput');
@@ -77,7 +69,5 @@ app.post('/workflow/cohort_analysis', async (c) => {
   }
 });
 
-const port = process.env.PORT ? parseInt(process.env.PORT) : 8086;
-console.log(`[agent6_cohort] Starting on port ${port}`);
-serve({ fetch: app.fetch, port });
+startAgentServer(app, 'agent6_cohort', 8086);
 export default app;

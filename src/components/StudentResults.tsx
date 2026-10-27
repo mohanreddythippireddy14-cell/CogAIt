@@ -1,6 +1,8 @@
 import { useNavigate, useParams } from "react-router-dom";
 import { useQuery, useMutation, useAction } from "convex/react";
+import { useAuthToken } from "@convex-dev/auth/react";
 import { api } from "../../convex/_generated/api";
+import { agentHeaders } from "../lib/agentFetch";
 import { Id } from "../../convex/_generated/dataModel";
 import { ArrowLeft, RotateCcw, Brain, Send, Sparkles, Loader2, ChevronDown, ChevronUp } from "lucide-react";
 import { toast } from "sonner";
@@ -162,6 +164,7 @@ function AgentChatPanel({
 
   const startAnalysis = useAction(anyApi.agentConversation.startAnalysis);
   const sendMessage = useAction(anyApi.agentConversation.sendMessage);
+  const authToken = useAuthToken();
 
   const [inputValue, setInputValue] = useState("");
   const [isSending, setIsSending] = useState(false);
@@ -205,10 +208,9 @@ function AgentChatPanel({
       if (conversation.status === "negotiating") {
         fetch(`${import.meta.env.VITE_AGENT_URL || ''}/agent-negotiation/webhook/student_reply`, {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: agentHeaders(authToken),
           body: JSON.stringify({
             conversation_id: conversation._id,
-            student_id: conversation.messages?.[0]?.role === "student" ? "student" : "student", // We need studentId ideally, but Agent can look it up via conversation_id
             message: msg
           }),
         }).catch(err => console.error("Negotiation webhook failed:", err));

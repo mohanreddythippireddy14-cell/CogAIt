@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useState, useCallback } from "react";
 import { useAction, useConvex, useMutation, useQuery } from "convex/react";
+import { useAuthToken } from "@convex-dev/auth/react";
 import { api } from "../../convex/_generated/api";
+import { agentHeaders } from "../lib/agentFetch";
 import { Id } from "../../convex/_generated/dataModel";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { Plus, BookOpen, Users, Activity, AlertTriangle, BarChart3, X, Copy, MoreVertical, Brain } from "lucide-react";
@@ -156,6 +158,7 @@ export function LecturerDashboard() {
   const [briefingLoading, setBriefingLoading] = useState(false);
 
   const AGENT_BASE = import.meta.env.VITE_AGENT_URL || '';
+  const authToken = useAuthToken();
 
   const fetchAiBriefing = useCallback(async () => {
     setBriefingLoading(true);
@@ -172,9 +175,10 @@ export function LecturerDashboard() {
 
       const res = await fetch(`${AGENT_BASE}/agent7/workflow/recommendation_generation`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: agentHeaders(authToken),
         body: JSON.stringify({
-          lecturer_id: user?.profile?.fullName || user?.name || user?.userId || 'lecturer',
+          // The agent replaces this with the signed-in lecturer's id from the token.
+          lecturer_id: user?.userId || 'lecturer',
           report_date: new Date().toISOString().split('T')[0],
           cohort_intelligence: {
             batch_id: intelligenceData?.assignmentTitle || intelligenceData?.assignmentId || "default_batch",
@@ -204,7 +208,7 @@ export function LecturerDashboard() {
     } finally {
       setBriefingLoading(false);
     }
-  }, [AGENT_BASE, user?.userId, user?.profile?.fullName, intelligenceData, overviewData]);
+  }, [AGENT_BASE, authToken, user?.userId, intelligenceData, overviewData]);
   const [showCreateClassroom, setShowCreateClassroom] = useState(false);
   const [classroomName, setClassroomName] = useState("");
   const [classroomSubject, setClassroomSubject] = useState<"Physics" | "Chemistry" | "Math">("Physics");

@@ -1,23 +1,15 @@
-import { serve } from '@hono/node-server';
-import { Hono } from 'hono';
-import Groq from 'groq-sdk';
+import type { Context } from 'hono';
+import { createAgentApp, startAgentServer } from '../lib/server.js';
+import { getModel, llm, parseJsonReply } from '../lib/llm.js';
+import { requireAgentKey } from '../middleware/auth.js';
 import { publishEvent } from '../pubsub/index.js';
 import { runPreExecutionHooks } from '../hooks/pre_hooks.js';
 import { runPostExecutionHooks } from '../hooks/post_hooks.js';
 import { convexReadHistory, bigqueryQuery, cisCalculator, vectorSearchRead, convexWriteCis } from '../tools/agent4_tools.js';
 import type { LongTermAnalystInput, LongTermAnalystOutput } from '../types/index.js';
 
-const app = new Hono();
-const groq = new Groq({ apiKey: process.env.GROQ_API_KEY, baseURL: process.env.CONVEX_URL?.replace(".cloud", ".site") + "/api/gemini-proxy/" || "https://dynamic-alpaca-596.convex.site/api/gemini-proxy/" });
-const MODELS = [(process.env.GEMINI_MODEL || 'gemini-3.8-flash')];
-
-app.use('*', async (c, next) => {
-  c.header('Access-Control-Allow-Origin', '*');
-  c.header('Access-Control-Allow-Methods', 'POST, OPTIONS');
-  c.header('Access-Control-Allow-Headers', 'Content-Type');
-  if (c.req.method === 'OPTIONS') return c.text('OK');
-  await next();
-});
+const app = createAgentApp();
+const MODELS = [getModel()];
 
 const systemPrompt = `You are the long-term strategic analyst for CogAIt. You never interact with students.
 You analyze the complete performance history of a student across four time windows:
@@ -34,7 +26,7 @@ You produce individual student reports consumed by Agent 6.
 You MUST respond with ONLY valid JSON in this exact format:
 {"student_id":"str","report_date":"str","cis_trajectory":{"week_1":0,"month_1":0,"month_3":0,"year_1":0},"topic_trends":[{"topic":"str","trend":"improving|stable|declining","avg_scaffold_depth":0,"sessions_count":0}],"at_risk":false,"ai_dependency_flag":false,"narrative_summary":"str"}`;
 
-app.post('/task/longterm_analysis', async (c) => {
+app.post('/task/longterm_analysis', requireAgentKey, async (c: Context) => {
   try {
     const rawInput = await c.req.json();
     const input = await runPreExecutionHooks(rawInput, 'Agent4') as LongTermAnalystInput;
@@ -49,7 +41,7 @@ app.post('/task/longterm_analysis', async (c) => {
     for (const model of MODELS) {
       try {
         console.log(`[Agent4] Trying ${model}`);
-        const result = await groq.chat.completions.create({
+        const result = await llm().chat.completions.create({
           model,
           messages: [
             { role: 'system', content: systemPrompt },
@@ -58,7 +50,7 @@ app.post('/task/longterm_analysis', async (c) => {
           temperature: 0.3,
           response_format: { type: 'json_object' }
         });
-        let out = JSON.parse(result.choices[0]?.message?.content || '{}') as LongTermAnalystOutput;
+        let out = parseJsonReply(result.choices[0]?.message?.content) as LongTermAnalystOutput;
         out.student_id = input.student_id;
         out.report_date = input.report_date;
         out = await runPostExecutionHooks<LongTermAnalystOutput>(out, 'Agent4', 'LongTermAnalystOutput');
@@ -75,7 +67,5 @@ app.post('/task/longterm_analysis', async (c) => {
   }
 });
 
-const port = process.env.PORT ? parseInt(process.env.PORT) : 8084;
-console.log(`[agent4_longterm] Starting on port ${port}`);
-serve({ fetch: app.fetch, port });
+startAgentServer(app, 'agent4_longterm', 8084);
 export default app;

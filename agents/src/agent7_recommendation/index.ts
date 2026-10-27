@@ -1,24 +1,14 @@
-import { EnvHttpProxyAgent, setGlobalDispatcher } from 'undici';
-setGlobalDispatcher(new EnvHttpProxyAgent());
-import { serve } from '@hono/node-server';
-import { Hono, Context, Next } from 'hono';
-import Groq from 'groq-sdk';
+import type { Context } from 'hono';
+import { createAgentApp, startAgentServer } from '../lib/server.js';
+import { getModel, llm, parseJsonReply } from '../lib/llm.js';
+import { requireAgentKeyOrUser } from '../middleware/auth.js';
 import { runPreExecutionHooks } from '../hooks/pre_hooks.js';
 import { runPostExecutionHooks } from '../hooks/post_hooks.js';
 import { recommendationEngine, briefingFormatter, convexWriteBriefing, agent7AlertDispatcher } from '../tools/agent7_tools.js';
 import type { RecommendationAgentInput, RecommendationAgentOutput } from '../types/index.js';
 
-const app = new Hono();
-const groq = new Groq({ apiKey: process.env.GOOGLE_API_KEY, baseURL: process.env.CONVEX_URL?.replace(".cloud", ".site") + "/api/gemini-proxy/" || "https://dynamic-alpaca-596.convex.site/api/gemini-proxy/" });
-const MODELS = [(process.env.GEMINI_MODEL || 'gemini-3.8-flash')];
-
-app.use('*', async (c: Context, next: Next) => {
-  c.header('Access-Control-Allow-Origin', '*');
-  c.header('Access-Control-Allow-Methods', 'POST, OPTIONS');
-  c.header('Access-Control-Allow-Headers', 'Content-Type');
-  if (c.req.method === 'OPTIONS') return c.text('OK');
-  await next();
-});
+const app = createAgentApp();
+const MODELS = [getModel()];
 
 const systemPrompt = `You are the liaison between the CogAIt intelligence system and human educators. You receive cohort intelligence from Agent 6 and translate it into a structured, prioritized, actionable daily briefing for the lecturer.
 
@@ -68,9 +58,11 @@ function buildFallbackBriefing(input: RecommendationAgentInput): RecommendationA
   };
 }
 
-app.post('/workflow/recommendation_generation', async (c: Context) => {
+app.post('/workflow/recommendation_generation', requireAgentKeyOrUser, async (c: Context) => {
   try {
     const rawInput = await c.req.json();
+    // A browser caller (lecturer dashboard) may only request its own briefing.
+    if (!c.get('callerIsService')) rawInput.lecturer_id = c.get('callerUserId');
     const input = await runPreExecutionHooks(rawInput, 'Agent7') as RecommendationAgentInput;
     let lastErr: any;
     
@@ -82,7 +74,7 @@ app.post('/workflow/recommendation_generation', async (c: Context) => {
       for (const model of MODELS) {
         try {
           console.log(`[Agent7] Trying ${model} (Attempt ${attempts + 1})`);
-          const result = await groq.chat.completions.create({
+          const result = await llm().chat.completions.create({
             model,
             messages: [
               { role: 'system', content: systemPrompt },
@@ -92,7 +84,7 @@ app.post('/workflow/recommendation_generation', async (c: Context) => {
             response_format: { type: 'json_object' }
           });
           
-          let out = JSON.parse(result.choices[0]?.message?.content || '{}') as RecommendationAgentOutput;
+          let out = parseJsonReply(result.choices[0]?.message?.content) as RecommendationAgentOutput;
           out.lecturer_id = input.lecturer_id;
           out.report_date = input.report_date;
           out.briefing_markdown = briefingFormatter(out.briefing_markdown, out);
@@ -124,7 +116,5 @@ app.post('/workflow/recommendation_generation', async (c: Context) => {
   }
 });
 
-const port = process.env.PORT ? parseInt(process.env.PORT) : 8087;
-console.log(`[agent7_recommendation] Starting on port ${port}`);
-serve({ fetch: app.fetch, port });
+startAgentServer(app, 'agent7_recommendation', 8087);
 export default app;

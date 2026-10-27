@@ -1,24 +1,14 @@
-import { serve } from '@hono/node-server';
-import { EnvHttpProxyAgent, setGlobalDispatcher } from 'undici';
-setGlobalDispatcher(new EnvHttpProxyAgent());
-import { Hono } from 'hono';
-import Groq from 'groq-sdk';
+import type { Context } from 'hono';
+import { createAgentApp, startAgentServer } from '../lib/server.js';
+import { getModel, llm, parseJsonReply } from '../lib/llm.js';
+import { requireAgentKey } from '../middleware/auth.js';
 import { runPreExecutionHooks } from '../hooks/pre_hooks.js';
 import { runPostExecutionHooks } from '../hooks/post_hooks.js';
 import { vertexSearchAllen, vertexSearchNTA, contentCache, contentValidator } from '../tools/agent3_tools.js';
 import type { ContentAgentInput, ContentAgentOutput } from '../types/index.js';
 
-const app = new Hono();
-const groq = new Groq({ apiKey: process.env.GROQ_API_KEY, baseURL: process.env.CONVEX_URL?.replace(".cloud", ".site") + "/api/gemini-proxy/" || "https://dynamic-alpaca-596.convex.site/api/gemini-proxy/" });
-const MODELS = [(process.env.GEMINI_MODEL || 'gemini-3.8-flash')];
-
-app.use('*', async (c, next) => {
-  c.header('Access-Control-Allow-Origin', '*');
-  c.header('Access-Control-Allow-Methods', 'POST, OPTIONS');
-  c.header('Access-Control-Allow-Headers', 'Content-Type');
-  if (c.req.method === 'OPTIONS') return c.text('OK');
-  await next();
-});
+const app = createAgentApp();
+const MODELS = [getModel()];
 
 const systemPrompt = `You are the curriculum builder for CogAIt. You are paranoid about academic accuracy.
 You only trust verified sources. You never fetch from unverified domains.
@@ -41,7 +31,7 @@ CRITICAL MATHEMATICAL FORMATTING RULES:
 You MUST respond with ONLY valid JSON in this exact format:
 {"student_id":"str","assignment":{"phase_1":{"title":"str","theory_sections":[{"heading":"str","content":"str"}],"pace_warning_threshold_minutes":10},"phase_2":{"questions":[{"question_text":"str","time_limit_seconds":60}],"total_time_minutes":10}},"content_confidence_score":0.9,"human_review_required":false}`;
 
-app.post('/webhook/remediation_requested', async (c) => {
+app.post('/webhook/remediation_requested', requireAgentKey, async (c: Context) => {
   try {
     const rawInput = await c.req.json();
     const input = await runPreExecutionHooks(rawInput, 'Agent3') as ContentAgentInput;
@@ -65,7 +55,7 @@ app.post('/webhook/remediation_requested', async (c) => {
           }
         }
         
-        const result = await groq.chat.completions.create({
+        const result = await llm().chat.completions.create({
           model,
           messages: [
             { role: 'system', content: systemPrompt },
@@ -74,7 +64,7 @@ app.post('/webhook/remediation_requested', async (c) => {
           temperature: 0.4,
           response_format: { type: 'json_object' }
         });
-        let out = JSON.parse(result.choices[0]?.message?.content || '{}') as ContentAgentOutput;
+        let out = parseJsonReply(result.choices[0]?.message?.content) as ContentAgentOutput;
         out.student_id = input.student_id; // enforce id transfer
         out = await runPostExecutionHooks<ContentAgentOutput>(out, 'Agent3', 'ContentAgentOutput');
         console.log(`[Agent3] Success with ${model}`);
@@ -101,7 +91,5 @@ app.post('/webhook/remediation_requested', async (c) => {
   }
 });
 
-const port = process.env.PORT ? parseInt(process.env.PORT) : 8083;
-console.log(`[agent3_content] Starting on port ${port}`);
-serve({ fetch: app.fetch, port });
+startAgentServer(app, 'agent3_content', 8083);
 export default app;

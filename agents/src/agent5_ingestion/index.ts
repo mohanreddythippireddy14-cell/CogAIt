@@ -1,22 +1,14 @@
-import { serve } from '@hono/node-server';
-import { Hono } from 'hono';
-import Groq from 'groq-sdk';
+import type { Context } from 'hono';
+import { createAgentApp, startAgentServer } from '../lib/server.js';
+import { getModel, llm, parseJsonReply } from '../lib/llm.js';
+import { requireAgentKey } from '../middleware/auth.js';
 import { runPreExecutionHooks } from '../hooks/pre_hooks.js';
 import { runPostExecutionHooks } from '../hooks/post_hooks.js';
 import { documentAiOutputParser, topicTaxonomyMapper, jsonFormatter, convexWriteAssignment } from '../tools/agent5_tools.js';
 import type { AssignmentCreatorInput, AssignmentCreatorOutput } from '../types/index.js';
 
-const app = new Hono();
-const groq = new Groq({ apiKey: process.env.GROQ_API_KEY, baseURL: process.env.CONVEX_URL?.replace(".cloud", ".site") + "/api/gemini-proxy/" || "https://dynamic-alpaca-596.convex.site/api/gemini-proxy/" });
-const MODELS = [(process.env.GEMINI_MODEL || 'gemini-3.8-flash')];
-
-app.use('*', async (c, next) => {
-  c.header('Access-Control-Allow-Origin', '*');
-  c.header('Access-Control-Allow-Methods', 'POST, OPTIONS');
-  c.header('Access-Control-Allow-Headers', 'Content-Type');
-  if (c.req.method === 'OPTIONS') return c.text('OK');
-  await next();
-});
+const app = createAgentApp();
+const MODELS = [getModel()];
 
 const systemPrompt = `You are the onboarding specialist for CogAIt. You receive OCR-extracted text from Google Cloud Document AI. Your job is flawless conversion of lecturer content into CogAIt-compatible structured assignments.
 
@@ -33,7 +25,7 @@ CRITICAL MATHEMATICAL FORMATTING RULES:
 You MUST respond with ONLY valid JSON in this exact format:
 {"assignment_id":"string","lecturer_id":"string","questions":[{"text":"string","options":["string"],"correct_answer":"string","mapped_topic":"string"}],"unmapped_items":[{"raw_text":"string","reason":"string"}],"mapping_confidence_avg":0.9}`;
 
-app.post('/webhook/document_uploaded', async (c) => {
+app.post('/webhook/document_uploaded', requireAgentKey, async (c: Context) => {
   try {
     const rawInput = await c.req.json();
     const input = await runPreExecutionHooks(rawInput, 'Agent5') as AssignmentCreatorInput;
@@ -46,7 +38,7 @@ app.post('/webhook/document_uploaded', async (c) => {
     for (const model of MODELS) {
       try {
         console.log(`[Agent5] Trying ${model}`);
-        const result = await groq.chat.completions.create({
+        const result = await llm().chat.completions.create({
           model,
           messages: [
             { role: 'system', content: systemPrompt },
@@ -57,7 +49,7 @@ app.post('/webhook/document_uploaded', async (c) => {
         });
         
         // Parse and validate
-        let out = JSON.parse(result.choices[0]?.message?.content || '{}') as AssignmentCreatorOutput;
+        let out = parseJsonReply(result.choices[0]?.message?.content) as AssignmentCreatorOutput;
         out.lecturer_id = input.lecturer_id;
         out = jsonFormatter(out);
         out = await runPostExecutionHooks<AssignmentCreatorOutput>(out, 'Agent5', 'AssignmentCreatorOutput');
@@ -75,7 +67,5 @@ app.post('/webhook/document_uploaded', async (c) => {
   }
 });
 
-const port = process.env.PORT ? parseInt(process.env.PORT) : 8085;
-console.log(`[agent5_ingestion] Starting on port ${port}`);
-serve({ fetch: app.fetch, port });
+startAgentServer(app, 'agent5_ingestion', 8085);
 export default app;
