@@ -1,40 +1,38 @@
 # Architecture
 
-CogAIt is built on a modern, serverless-first stack designed for high concurrency and strict data integrity. The core innovation is an asynchronous, 8-agent orchestration layer that acts independently of the main request-response cycle.
+CogAIt has three parts:
+- **React frontend** (`src/`): the student and lecturer UIs.
+- **Convex backend** (`convex/`): data, auth, the tutor action, scores, crons.
+- **Agent layer** (`agents/`): small Node/Hono services that analyse sessions after the fact.
 
-## System Context
-The platform serves Students and Lecturers, brokering data through Convex, and utilizing Google Gemini (via Groq) for high-speed inference.
+The tutor itself runs in Convex, so it works without the agent layer. The agents add analysis and, optionally, the Socratic reply generation (Agent 1).
 
-[View System Context Diagram](assets/diagrams/01_system_context.md)
+## System context
+Students and lecturers use the web app. All AI calls go to Google Gemini.
+[View diagram](assets/diagrams/01_system_context.md)
 
-## Component Architecture
-- **Frontend:** React 19.2 + Vite, heavily utilizing shadcn/Tailwind for the UI.
-- **Backend Datastore & Logic:** Convex handles all operational data, role-based access, and cron jobs.
-- **Agentic Layer:** Node.js/Hono microservices. 8 distinct agents communicate via webhooks and tasks, each with a narrow, focused system prompt.
+## Components
+- **Frontend:** React 19 + Vite, Tailwind, Convex React hooks and Convex Auth.
+- **Convex:** schema (29 application tables, organisation-scoped), queries/mutations/actions, 4 cron jobs (dashboard rollups, drift detection, AI job timeouts), and an HTTP router with data exports and the Gemini proxy used by the agents.
+- **Agents:** 8 agents plus the negotiation node, each a Hono service with input/output schema validation, guardrail hooks and authenticated endpoints. Service-to-service calls use `X-Agent-Key`; browser calls use the user's Convex Auth token.
 
-[View Component Architecture Diagram](assets/diagrams/02_component_architecture.md)
+[View diagram](assets/diagrams/02_component_architecture.md)
 
-## Main User Flow
-The critical loop involves a student attempting a problem, getting blocked, and requesting help. The AI intervenes *without* giving the answer, forcing the student to resolve the logic gap.
+## Main user flow
+A student attempts a question, asks for help, receives a Socratic reply (never the answer), and submits. On submit, the browser notifies Agent 2, which starts the analysis chain.
+[View diagram](assets/diagrams/03_user_flow.md)
 
-[View User Flow Diagram](assets/diagrams/03_user_flow.md)
-
-## Data Flow & Privacy
-Operational data flows from the React client into Convex. The agentic layer pulls sanitized, anonymized session data to perform long-term analysis, passing context to the LLMs.
-
-[View Data Flow Diagram](assets/diagrams/04_data_flow.md)
+## Data flow
+Operational data lives in Convex. Agents read what they need through key-protected Convex functions (`convex/agentAPI.ts`) and keep their own records (briefings, verdicts, cohort buffers) as JSON files in `agents/.memory/`.
+[View diagram](assets/diagrams/04_data_flow.md)
 
 ## Deployment
-Convex acts as the serverless backbone. The Agentic layer is containerized (Docker) and deployed to Google Cloud Run, scaling to zero when idle.
+The frontend is a static Vite build, and Convex is hosted by Convex. The agents ship with Dockerfiles and Cloud Build configs for Cloud Run, but that deployment has **not** been verified. To run there they also need durable storage for agent memory and `AGENTn_URL` routes between services; see FUTURE_ACTIONS.
+[View diagram](assets/diagrams/05_deployment.md)
 
-[View Deployment Diagram](assets/diagrams/05_deployment.md)
+## Agent LLM calls (Gemini proxy)
+Agents call Gemini's OpenAI-compatible endpoint through the Convex route `/api/gemini-proxy/openai/v1/chat/completions`. The route is a pass-through: it forwards the request and the caller's key and does **not** enforce rate limits or cost governance.
+[View diagram](assets/diagrams/07_api_sequence.md)
 
-## Architecture Evolution
-The architecture has matured from a simple CRUD MVP to a complex, multi-agent enterprise infrastructure.
-
-[View Architecture Evolution Diagram](assets/diagrams/06_architecture_evolution.md)
-
-## API Sequence (Gemini Proxy)
-To protect API keys and manage cost governance, all Agent LLM requests are proxied through a Convex HTTP endpoint.
-
-[View API Sequence Diagram](assets/diagrams/07_api_sequence.md)
+## History
+[Architecture evolution](assets/diagrams/06_architecture_evolution.md)

@@ -1,27 +1,29 @@
 # Features & Status
 
-The CogAIt platform makes extensive use of feature flags to manage rollouts. Below is the current matrix of features, their status, and what is deliberately out of scope.
+CogAIt is a working prototype. "Working" below means implemented and exercised by the code paths described, not production-proven.
 
-## Feature Matrix
+## Feature matrix
 
-| Feature | Status | Description |
+| Feature | Status | Notes |
 |---|---|---|
-| **Student Platform (JEE/NEET)** | **Live** | Full exam-style interface with Socratic AI interaction. |
-| **Think-First Gate** | **Live** | Requires students to input >100 characters of reasoning before requesting AI help. |
-| **4-Level AI Assistance** | **Live** | Dynamic Socratic agent that scales from Logic Checks to Maximum Scaffolding. |
-| **Math Rendering** | **Live** | KaTeX/LaTeX support for complex STEM problems. |
-| **Enhanced Integrity & Proctoring** | **Live** | Tab-switch locking and copy/paste detection during assignments. |
-| **Teacher Dashboard API** | **Live** | Core endpoints for teacher classroom analytics. |
-| **Results V2** | **Live** | Advanced results and cognitive independence readouts. |
-| **Agentic Layer** | **Beta** | 8-node microservice orchestration for asynchronous analysis and generation. |
-| **B2B SaaS / White-labeling** | **Planned (Phase 2)** | Multi-institution white-label platform for coaching centers. |
-| **Cost Governance** | **Planned** | Hard limits and dashboarding for LLM usage and billing. |
-| **Admin Dashboard** | **Planned** | System-wide monitoring and internal operations panels. |
-| **AI Regression Enforcement** | **Planned** | Automated gating for AI prompt/model updates. |
+| Student assignment flow (JEE/NEET style) | Working | Questions, drafts, navigator, timer, results |
+| Socratic AI tutor, 4 help levels | Working | `convex/ai.ts`; optional routing through Agent 1 |
+| Answer-leak validator + regeneration + fallback | Working | `convex/domain/aiPolicy.ts`, unit-tested |
+| Help limit: 5 per 5 min, 30 s apart, per student | Working | `convex/application/aiService.ts`, unit-tested |
+| Image feedback on handwritten work | Working | Same leak validator; a violating reply is replaced by the fallback question (no regeneration) |
+| Math rendering | Working | MathJax (loaded from CDN) |
+| Exam integrity (tab-switch, copy/paste, auto-submit after 5 violations) | Working | `QuestionView.tsx`, `convex/sessionLocks.ts` |
+| CIS, independence and cognitive scores; topic heatmap | Working | `convex/domain/scoring.ts`, [CIS_SPEC](CIS_SPEC.md), [HEATMAP_SPEC](HEATMAP_SPEC.md) |
+| Lecturer dashboards, AI assignment generation from PDF/text | Working | Convex + Gemini |
+| Agent layer (analysis, remediation, reports, briefings, judge) | Beta | See the agent table in the [README](../README.md#the-agent-layer) |
+| **Think-first gate** (minimum reasoning before help) | **Planned** | `minReasoningChars` is stored per assignment (default 30) but not enforced |
+| Organisation rate limit, cost governance, admin dashboard | Behind flags, off | Code exists in `convex/rateLimits.ts`, `convex/costGovernance.ts` |
+| AI regression enforcement | Behind flag, off | Blocks invalid replies instead of serving the fallback |
+| Multi-institution white-label (B2B) | Planned | Data model is organisation-scoped already |
 
-## Out of Scope
-CogAIt deliberately **does not** support the following, as they directly conflict with our pedagogical mission:
-- **Instant Gratification Solutions:** The AI will never provide a direct numerical answer or a fully completed step-by-step solution.
-- **Cognitively Passive Learning:** Features that allow students to bypass the "struggle" phase of problem-solving.
+## Out of scope
+CogAIt deliberately does **not** support:
+- **Instant solutions.** The AI never provides a final numerical answer or a completed step-by-step solution.
+- **Passive learning.** No feature lets a student skip the attempt-first phase.
 
-*(Currently unoptimized for non-STEM subjects or native offline mobile apps).*
+It is currently tuned for STEM (Physics, Chemistry, Math), in English, as a web app (no native mobile or offline mode).

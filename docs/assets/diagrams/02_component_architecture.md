@@ -4,32 +4,34 @@
 C4Container
     title Component Architecture for CogAIt
 
-    Container_Boundary(frontend, "Frontend Application") {
-        Container(react_app, "React App", "React 19.2, Vite 6.2", "Role-based router, UI, Dashboards, Socratic chat interface")
+    Container_Boundary(frontend, "Frontend") {
+        Container(react_app, "React App", "React 19, Vite 6", "Student and lecturer UIs, Socratic chat, dashboards")
     }
 
-    Container_Boundary(backend, "Convex Backend") {
-        Container(convex_db, "Convex Database", "Convex", "Stores UserProfiles, Assignments, Sessions, AiInteractions, Analytics")
-        Container(convex_logic, "Convex Server Functions", "TypeScript", "Mutations, Queries, Cron Jobs, Rollups, API V1")
-        Container(gemini_proxy, "Gemini Proxy", "TypeScript", "Proxies requests from agents to Gemini models")
+    Container_Boundary(backend, "Convex") {
+        Container(convex_logic, "Convex Functions", "TypeScript", "Tutor action (ai.sendChatMessage), scores, rollups, crons, agentAPI")
+        Container(convex_db, "Convex Database", "Convex", "29 organisation-scoped tables")
+        Container(gemini_proxy, "Gemini proxy route", "HTTP action", "Pass-through to Gemini's OpenAI-compatible API for the agents")
     }
 
-    Container_Boundary(agent_layer, "Agentic Layer (Microservices)") {
-        Container(agent1, "Agent 1: Socratic", "Node.js / Hono", "Socratic tutoring (Port 8081)")
-        Container(agent2, "Agent 2: Analyst", "Node.js / Hono", "Session analysis (Port 8082)")
-        Container(agent3, "Agent 3: Content", "Node.js / Hono", "Remediation generation (Port 8083)")
-        Container(agent4, "Agent 4: Long-term", "Node.js / Hono", "Tracks mastery over time (Port 8084)")
-        Container(agent5, "Agent 5: Ingestion", "Node.js / Hono", "Document ingestion & extraction (Port 8085)")
-        Container(agent6, "Agent 6: Cohort", "Node.js / Hono", "Cohort analysis (Port 8086)")
-        Container(agent7, "Agent 7: Recommendation", "Node.js / Hono", "Generates teacher recommendations (Port 8087)")
-        Container(agent8, "Agent 8: Judge", "Node.js / Hono", "Validates policies and schemas (Port 8088)")
-        Container(negotiation, "Negotiation Node", "Node.js", "Handles student remediation offers (Port 8089)")
+    Container_Boundary(agent_layer, "Agent services (Node.js / Hono)") {
+        Container(agent1, "Agent 1: Socratic", "8081", "Tutor reply generation (optional)")
+        Container(agent2, "Agent 2: Analyst", "8082", "Session -> topic signals")
+        Container(negotiation, "Negotiation node", "8089", "Remediation offers")
+        Container(agent3, "Agent 3: Content", "8083", "Practice sets")
+        Container(agent4, "Agent 4: Long-term", "8084", "Student reports")
+        Container(agent5, "Agent 5: Ingestion", "8085", "Text -> draft assignment")
+        Container(agent6, "Agent 6: Cohort", "8086", "Cohort patterns")
+        Container(agent7, "Agent 7: Recommendation", "8087", "Lecturer briefings")
+        Container(agent8, "Agent 8: Judge", "8088", "Audits agent outputs")
     }
 
-    Rel(react_app, convex_logic, "Calls APIs", "HTTPS / WebSocket")
+    Rel(react_app, convex_logic, "Queries, mutations, actions", "WebSocket/HTTPS")
+    Rel(react_app, agent2, "Session ended (user token)", "HTTPS")
+    Rel(react_app, agent7, "Request briefing (user token)", "HTTPS")
+    Rel(react_app, negotiation, "Consent / chat replies (user token)", "HTTPS")
     Rel(convex_logic, convex_db, "Reads/Writes", "Internal")
-    Rel(convex_logic, agent1, "Triggers AI Help", "HTTP")
-    Rel(convex_logic, agent5, "Triggers Document Ingestion", "HTTP")
-    Rel(agent_layer, gemini_proxy, "Requests Completions", "HTTP")
-    Rel(gemini_proxy, convex_logic, "Returns Validated Responses", "Internal")
+    Rel(convex_logic, agent1, "Socratic reply (X-Agent-Key)", "HTTPS")
+    Rel(agent_layer, convex_logic, "agentAPI, conversations (agent key)", "HTTPS")
+    Rel(agent_layer, gemini_proxy, "Chat completions", "HTTPS")
 ```

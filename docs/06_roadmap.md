@@ -1,28 +1,24 @@
 # Roadmap
 
-CogAIt is actively evolving from a single-institution pilot into a broad B2B SaaS platform.
+The concrete, step-by-step list is in [FUTURE_ACTIONS.md](../FUTURE_ACTIONS.md). This page is the high-level view.
 
-## Phase 1 — Now
-- **Status:** Live
-- **Focus:** JEE & NEET student platform.
-- **Key Deliverables:** 4-level Socratic assistance, core agentic orchestration, pilot with first institution.
+## Phase 1: Prototype (now)
+- JEE/NEET student platform with the 4-level Socratic tutor, answer-leak validation and help limits.
+- Lecturer dashboards, AI assignment generation, integrity monitoring.
+- Agent layer for post-session analysis (beta).
 
-## Phase 2 — B2B SaaS
-- **Status:** In Development
-- **Focus:** White-label platform for coaching institutes across India.
-- **Key Deliverables:** 
-  - Multi-institution analytics dashboards.
-  - Per-institution subscription modeling and cost governance.
-  - Advanced teacher classroom insights.
+## Phase 2: Pilot
+- Enforce the think-first gate.
+- Deploy the agents (Cloud Run) with durable memory and real Pub/Sub.
+- Run a first pilot with an institution, and publish measured results: tutor latency, cost per help request, answer-leak rate and CIS change over time.
 
-## Phase 3 — Reasoning AI Research
-- **Status:** Planned
-- **Focus:** Proprietary model research.
-- **Key Deliverables:** 
-  - Developing and fine-tuning a proprietary LLM explicitly trained to *ask* rather than *answer*.
-  - Establishing a true "Reasoning-focused" model.
+## Phase 3: B2B SaaS
+- White-label platform for coaching institutes, multi-institution analytics, per-institution cost governance.
 
-## Known Limitations
-- The platform is currently heavily optimized for STEM subjects (Mathematics, Physics, Chemistry) requiring KaTeX rendering.
-- No native mobile application or offline support exists.
-- The UI is undergoing a major transition (from a neon dark theme to a Google-Classroom light theme).
+## Phase 4: Reasoning-focused models
+- Fine-tune a model trained to *ask* rather than *answer*, using the logged tutor interactions and Judge verdicts.
+
+## Known limitations
+- STEM only (Physics, Chemistry, Math), English only, web only.
+- Agent 3 content is not grounded in verified sources yet.
+- The UI is mid-transition from a dark "spatial" theme to a light Google-Classroom-style theme.
